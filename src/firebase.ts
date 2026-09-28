@@ -17,7 +17,7 @@ const config = {
 }
 
 export const ALLOWED_EMAIL = (
-  import.meta.env.VITE_ALLOWED_EMAIL || 'carlos.falcon.tbp@gmail.com'
+  import.meta.env.VITE_ALLOWED_EMAIL || 'falconcarlos.ia@gmail.com'
 ).toLowerCase()
 
 // Sin config la app muestra una pantalla de ayuda en vez de romper: getAuth
