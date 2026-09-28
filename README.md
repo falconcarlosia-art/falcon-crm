@@ -39,6 +39,21 @@ catálogos, sugerencias). Se publica en https://falcon-crm.web.app.
   cambiar de etapa.
 - **Importar contactos** desde Excel/CSV o pegando una lista: detecta las
   columnas de nombre y celular, marca duplicados y omite filas incompletas.
+- **IA con OpenRouter** (Ajustes → Inteligencia artificial): una API key de
+  OpenRouter y un modelo por tarea, elegido de la lista pública de modelos
+  ordenada por costo por uso.
+  - *Armar con IA* (editor de cotización): pegas el mensaje del cliente y la IA
+    propone los ítems del catálogo de Supabase con su precio. Los servicios o
+    productos que no están en el catálogo entran a S/ 0, resaltados para que les
+    pongas precio. Un id inventado por el modelo nunca se acepta como producto.
+  - *Analizar chat* (ficha del contacto): pegas la conversación y la IA propone
+    etapa, etiquetas, notas y fecha de seguimiento (cada cambio se aplica solo si
+    lo marcas), además de una respuesta lista para WhatsApp.
+  - Se prefieren los modelos con salida estructurada (`json_schema` estricto y
+    `provider.require_parameters`). Con los demás, el esquema va en el prompt y el
+    JSON se valida al leerlo.
+  - La key vive en `private/ai` de Firestore (solo el dueño la lee) y se usa
+    desde el navegador. Conviene ponerle un límite de crédito en OpenRouter.
 - **Enlaces cortos**: las imágenes se envían como `falcon-crm.web.app/v/xxxx`
   en lugar de la URL larga de Storage. Esa página es pública y redirige a la
   imagen. El código es aleatorio, así que no se pueden adivinar otras
@@ -105,6 +120,7 @@ npm run build && npx firebase-tools deploy --only hosting
 | `templates/{id}` | `name`, `body` |
 | `quotes/{id}` | `number`, `contactId`, `clientName`, `issueDate`, `validUntil`, `items[]`, `conditions`, `total`, `imageUrl`, `pdfUrl` |
 | `counters/quote-AAAA-DDMM` | `last`: último correlativo del día |
+| `private/ai` | `apiKey` de OpenRouter, `quoteModel`, `chatModel` |
 | `links/{código}` | `url`: destino del enlace corto. Única colección de lectura pública (solo `get`) |
 | `settings/company` | datos de empresa, pagos, QR Yape (data URL), condiciones por defecto |
 

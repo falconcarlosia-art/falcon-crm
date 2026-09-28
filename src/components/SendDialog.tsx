@@ -22,6 +22,7 @@ export function SendDialog({
   initialImage,
   initialImageId,
   initialTemplateName,
+  initialMessage,
   onClose,
 }: {
   contact: Contact
@@ -30,6 +31,8 @@ export function SendDialog({
   initialImage?: ImageItem
   initialImageId?: string
   initialTemplateName?: string
+  /** Texto ya redactado (p. ej. la respuesta sugerida por la IA): se respeta hasta cambiar plantilla o imagen. */
+  initialMessage?: string
   onClose: () => void
 }) {
   const toast = useToast()
@@ -40,7 +43,7 @@ export function SendDialog({
   const [templateId, setTemplateId] = useState<string>(
     (templates.find((t) => t.name === initialTemplateName) ?? templates[0])?.id ?? '',
   )
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(initialMessage ?? '')
   const [shareFile, setShareFile] = useState<File | null>(null)
   const [shareError, setShareError] = useState(false)
   const [markQuoted, setMarkQuoted] = useState(EARLY_STAGES.has(contact.stage))
@@ -62,7 +65,12 @@ export function SendDialog({
   const template = templates.find((t) => t.id === templateId) ?? templates[0] ?? null
 
   // Cambiar imagen o plantilla rehace el mensaje; luego se puede editar a mano.
+  // Con un mensaje inicial, la combinación de arranque ya "está aplicada".
+  const selectionKey = `${template?.body ?? ''}|${image?.id ?? ''}|${contact.name}`
+  const lastSelection = useRef<string | null>(initialMessage ? selectionKey : null)
   useEffect(() => {
+    if (lastSelection.current === selectionKey) return
+    lastSelection.current = selectionKey
     const body = template?.body ?? 'Hola {nombre}\n{enlace}'
     setMessage(fillTemplate(body, { name: contact.name, link: image ? shareUrl(image) : null }))
     // eslint-disable-next-line react-hooks/exhaustive-deps

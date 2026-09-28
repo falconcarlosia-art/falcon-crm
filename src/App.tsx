@@ -7,6 +7,7 @@ import { LibraryView } from './components/LibraryView'
 import { TemplatesView } from './components/TemplatesView'
 import { SettingsView } from './components/SettingsView'
 import { useAllQuotes, useSettings } from './quotes'
+import { useAiConfig } from './ai'
 import { IconImage, IconLogout, IconMessage, IconSettings, IconUsers } from './components/icons'
 import { errorMessage, useToast } from './components/toast'
 
@@ -115,6 +116,7 @@ function Shell({ user }: { user: User }) {
   const templates = useTemplates()
   const settings = useSettings()
   const quotes = useAllQuotes()
+  const ai = useAiConfig()
 
   useEffect(() => {
     seedTemplatesOnce().catch((err) => toast(errorMessage(err), 'error'))
@@ -153,11 +155,12 @@ function Shell({ user }: { user: User }) {
             templates={templates.data}
             settings={settings}
             quotes={quotes}
+            ai={ai}
           />
         )}
         {tab === 'biblioteca' && <LibraryView images={images.data} contacts={contacts.data} />}
         {tab === 'plantillas' && <TemplatesView templates={templates.data} />}
-        {tab === 'ajustes' && <SettingsView settings={settings} />}
+        {tab === 'ajustes' && <SettingsView settings={settings} ai={ai} />}
       </main>
 
       <nav className="bottom-nav show-mobile">

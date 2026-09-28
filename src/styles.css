@@ -438,8 +438,15 @@ select {
 
 /* Contenido que no debe ensanchar su columna (grid items tienen min-width: auto). */
 .detail, .detail > *, .qe-form > *, .qe-row > *, .board-col, .board-card { min-width: 0; }
-.qe-body { grid-template-columns: minmax(0, 1fr); }
 .qe-row input { min-width: 0; }
+@media (max-width: 899px) {
+  .qe-body { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 900px) {
+  .qe-body { grid-template-columns: minmax(380px, 460px) minmax(0, 1fr); }
+}
+.settings .form input[type='checkbox'] { width: 18px; height: 18px; padding: 0; flex: none; }
+.model-tools .check { justify-content: flex-start; }
 
 /* Botón Nuevo compacto dentro de la columna de la lista (escritorio). */
 .list-pane .toolbar .btn-new { padding: 0; width: 42px; flex: none; }
@@ -519,3 +526,53 @@ select {
 @media (max-width: 899px) {
   .show-mobile-block { display: block; }
 }
+
+/* ---- IA (OpenRouter) ---- */
+.ai-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;
+  padding: 10px; border-radius: 10px; border: 1px dashed #c9b6f5; background: #f7f3ff; color: #6d3fd6;
+  font-weight: 600; font-size: 14px;
+}
+.ai-trigger:hover { background: #efe8ff; }
+.ai-box { border: 1px solid #d9ccf8; background: #faf8ff; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; display: grid; gap: 8px; }
+.ai-box-head { display: flex; align-items: center; justify-content: space-between; }
+.ai-box-head b, .ai-needs { display: inline-flex; align-items: center; gap: 6px; color: #6d3fd6; }
+.ai-box-head .icon-btn { width: 28px; height: 28px; }
+.qe .ai-box textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; resize: vertical; font: inherit; }
+.ai-box-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ai-result { border-top: 1px solid #e5dcfb; padding-top: 8px; }
+.ai-result p { margin: 0 0 6px; }
+.ai-result ul { margin: 4px 0 8px; padding-left: 18px; }
+.qe-items li.qe-needs-price { border-color: #f5b400; background: #fffaeb; }
+.qe-items li.qe-needs-price .qe-item-nums input:first-of-type { border-color: #f5b400; }
+
+.ai-analysis { display: grid; gap: 12px; }
+.ai-needs { margin: 0; font-weight: 600; }
+.ai-props { display: grid; gap: 6px; }
+.ai-prop { display: flex; gap: 10px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.ai-prop input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--orange); flex: none; }
+.ai-prop > span { display: grid; gap: 2px; font-size: 14px; min-width: 0; }
+.ai-prop-value { color: #334155; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.ai-settings .ai-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ai-settings .ai-head .section-title { margin: 0; }
+.key-row { display: flex; gap: 6px; }
+.key-row input { flex: 1; min-width: 0; font-family: ui-monospace, monospace; }
+.model-current {
+  text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px 12px;
+  display: grid; gap: 2px; font: inherit; width: 100%;
+}
+.model-current:hover { border-color: var(--orange); }
+.model-picker { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #fafbfc; display: grid; gap: 8px; }
+.model-tools { display: grid; gap: 6px; }
+.model-tools .check { margin: 0; }
+.model-list { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; display: grid; gap: 4px; }
+.model-list button {
+  width: 100%; display: flex; justify-content: space-between; gap: 10px; text-align: left; border: 1px solid transparent;
+  background: #fff; border-radius: 8px; padding: 8px 10px; font: inherit;
+}
+.model-list button:hover { border-color: var(--line); }
+.model-list button.on { border-color: var(--orange); background: #fff8ee; }
+.model-name, .model-price { display: grid; min-width: 0; }
+.model-name b, .model-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-price { text-align: right; flex: none; }

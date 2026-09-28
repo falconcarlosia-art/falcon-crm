@@ -17,6 +17,9 @@ import {
   type QuoteItem,
 } from '../quotes'
 import type { Contact, ImageItem } from '../types'
+import { aiReady, usd, type AiConfig } from '../ai'
+import { quoteFromMessage, type AiQuote } from '../aiTasks'
+import { IconSparkle } from './icons'
 
 const COND_FIELDS: [keyof QuoteConditions, string][] = [
   ['payment', 'Forma de pago'],
@@ -32,6 +35,7 @@ export function QuoteEditor({
   contacts,
   initial,
   company,
+  ai,
   onClose,
   onGenerated,
 }: {
@@ -40,6 +44,7 @@ export function QuoteEditor({
   contacts?: Contact[]
   initial?: { items: QuoteItem[]; conditions: QuoteConditions; number: string }
   company: CompanySettings
+  ai: AiConfig
   onClose: () => void
   onGenerated: (image: ImageItem, contact: Contact) => void
 }) {
@@ -95,6 +100,30 @@ export function QuoteEditor({
     }
     setSearch('')
     setShowResults(false)
+  }
+
+  /** Ítems que propone la IA: los del catálogo con su precio; los libres a S/ 0 para completar. */
+  function addAiLines(lines: { product: Product | null; name: string; qty: number }[]) {
+    const next = [...items]
+    for (const l of lines) {
+      const existing = l.product ? next.findIndex((i) => i.productId === l.product!.id) : -1
+      if (existing >= 0) next[existing] = { ...next[existing], qty: next[existing].qty + l.qty }
+      else
+        next.push({
+          productId: l.product?.id ?? null,
+          name: l.product?.name ?? l.name,
+          thumb: null,
+          unitPrice: l.product?.price ?? 0,
+          qty: l.qty,
+        })
+    }
+    setItems(next)
+    lines.forEach(({ product: p }) => {
+      if (p?.imageUrl)
+        void toDataUrl(p.imageUrl, 160).then(
+          (thumb) => thumb && setItems((xs) => xs.map((i) => (i.productId === p.id ? { ...i, thumb } : i))),
+        )
+    })
   }
 
   function updateItem(idx: number, patch: Partial<QuoteItem>) {
@@ -200,6 +229,7 @@ export function QuoteEditor({
 
           <section className="card">
             <h3 className="section-title">Productos</h3>
+            <AiQuoteBox ai={ai} catalog={catalog} catalogLoading={catalogState === 'loading'} onLines={addAiLines} />
             {productsConfigured ? (
               <div className="qe-search">
                 <label className="search">
@@ -243,7 +273,7 @@ export function QuoteEditor({
 
             <ul className="qe-items">
               {items.map((it, idx) => (
-                <li key={idx}>
+                <li key={idx} className={it.unitPrice === 0 ? 'qe-needs-price' : ''}>
                   {it.thumb ? <img src={it.thumb} alt="" /> : <span className="qe-noimg" />}
                   <div className="qe-item-main">
                     {/* textarea que crece con el texto: en el celular los nombres largos no se cortan. */}
@@ -364,6 +394,113 @@ function ScaledSheet({ children }: { children: React.ReactNode }) {
       <div ref={inner} style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 760 }}>
         {children}
       </div>
+    </div>
+  )
+}
+
+/** Pegar el mensaje del cliente → la IA propone los ítems con productos del catálogo. */
+function AiQuoteBox({
+  ai,
+  catalog,
+  catalogLoading,
+  onLines,
+}: {
+  ai: AiConfig
+  catalog: Product[]
+  catalogLoading: boolean
+  onLines: (lines: { product: Product | null; name: string; qty: number }[]) => void
+}) {
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<{ quote: AiQuote; cost: number | null; unknown: number; free: number } | null>(null)
+  const ready = aiReady(ai, 'quote')
+
+  async function run() {
+    setBusy(true)
+    setResult(null)
+    try {
+      const { data, cost } = await quoteFromMessage(ai, text, catalog)
+      const byId = new Map(catalog.map((p) => [p.id, p]))
+      let unknown = 0
+      const lines = data.items
+        .filter((l) => l.qty > 0 && (l.product_id || l.description.trim()))
+        .map((l) => {
+          // Un id que no existe se trata como ítem libre: nunca se confía en un precio inventado.
+          const product = l.product_id ? byId.get(l.product_id) ?? null : null
+          if (l.product_id && !product) unknown++
+          return { product, name: l.description.trim(), qty: Math.round(l.qty) }
+        })
+      onLines(lines)
+      setResult({ quote: data, cost, unknown, free: lines.filter((l) => !l.product).length })
+      toast(`${lines.length} ítem${lines.length === 1 ? '' : 's'} agregado${lines.length === 1 ? '' : 's'}`)
+    } catch (err) {
+      toast(errorMessage(err), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!open)
+    return (
+      <button className="ai-trigger" onClick={() => setOpen(true)}>
+        <IconSparkle width={16} height={16} /> Armar con IA desde el mensaje del cliente
+      </button>
+    )
+
+  return (
+    <div className="ai-box">
+      <div className="ai-box-head">
+        <b>
+          <IconSparkle width={16} height={16} /> Armar con IA
+        </b>
+        <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Cerrar">
+          <IconX width={16} height={16} />
+        </button>
+      </div>
+      {!ready ? (
+        <p className="small muted">Configura la API key de OpenRouter y el modelo para cotizar en Ajustes → Inteligencia artificial.</p>
+      ) : (
+        <>
+          <textarea
+            rows={4}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Pega aquí lo que te escribió el cliente: «Hola, quiero automatizar las luces de la sala y la cocina y poner una cámara en la entrada…»"
+          />
+          <div className="ai-box-actions">
+            <span className="muted small">{catalogLoading ? 'Cargando catálogo…' : `${catalog.length} productos en el catálogo`}</span>
+            <button className="btn btn-dark btn-sm" onClick={run} disabled={busy || !text.trim() || catalogLoading}>
+              {busy ? 'Pensando…' : 'Armar cotización'}
+            </button>
+          </div>
+        </>
+      )}
+      {result && (
+        <div className="ai-result small">
+          <p>
+            <b>Entendí:</b> {result.quote.summary}
+          </p>
+          {result.quote.questions.length > 0 && (
+            <>
+              <b>Conviene preguntarle:</b>
+              <ul>
+                {result.quote.questions.map((q, i) => (
+                  <li key={i}>{q}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p className="muted">
+            {result.free > 0
+              ? `Revisa los ${result.free} ítem${result.free === 1 ? '' : 's'} resaltado${result.free === 1 ? '' : 's'}: no están en el catálogo y quedaron a S/ 0.`
+              : 'Todos los ítems salieron del catálogo con su precio.'}
+            {result.unknown > 0 && ` (${result.unknown} con id desconocido se pasaron a ítem libre.)`}
+            {result.cost !== null && ` · Costo: ${usd(result.cost)}`}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

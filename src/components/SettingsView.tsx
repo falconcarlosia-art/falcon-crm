@@ -3,6 +3,8 @@ import { IconUpload } from './icons'
 import { errorMessage, useToast } from './toast'
 import { saveSettings, toDataUrl, type CompanySettings, type QuoteConditions } from '../quotes'
 import { productsConfigured } from '../supabase'
+import { AiSettings } from './AiSettings'
+import type { AiConfig } from '../ai'
 
 type TextKey = Exclude<keyof CompanySettings, 'yapeQr' | 'validityDays' | 'conditions'>
 
@@ -33,7 +35,7 @@ const CONDS: [keyof QuoteConditions, string][] = [
   ['commercial', 'Condición comercial'],
 ]
 
-export function SettingsView({ settings }: { settings: CompanySettings }) {
+export function SettingsView({ settings, ai }: { settings: CompanySettings; ai: AiConfig }) {
   const toast = useToast()
   const [form, setForm] = useState(settings)
   const [dirty, setDirty] = useState(false)
@@ -147,6 +149,8 @@ export function SettingsView({ settings }: { settings: CompanySettings }) {
             : 'Supabase no configurado: completa VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env.production.'}
         </p>
       </section>
+
+      <AiSettings config={ai} />
     </div>
   )
 }

@@ -8,6 +8,8 @@ import { ImportDialog } from './ImportDialog'
 import { SendDialog } from './SendDialog'
 import { QuoteEditor } from './QuoteEditor'
 import type { CompanySettings, Quote } from '../quotes'
+import type { AiConfig } from '../ai'
+import { AnalyzeChatDialog } from './AnalyzeChatDialog'
 import { formatPhone } from '../phone'
 import { initials, relDate } from '../format'
 import { STAGES, stageOf, type Contact, type ImageItem, type Template } from '../types'
@@ -16,7 +18,8 @@ type Dialog =
   | { kind: 'new' }
   | { kind: 'edit'; contact: Contact }
   | { kind: 'import' }
-  | { kind: 'send'; contact: Contact; image?: ImageItem; imageId?: string; templateName?: string }
+  | { kind: 'send'; contact: Contact; image?: ImageItem; imageId?: string; templateName?: string; message?: string }
+  | { kind: 'analyze'; contact: Contact }
   | { kind: 'quote'; contact: Contact; from?: Quote }
   | null
 
@@ -37,6 +40,7 @@ export function ContactsView({
   templates,
   settings,
   quotes,
+  ai,
 }: {
   contacts: Contact[]
   loading: boolean
@@ -44,6 +48,7 @@ export function ContactsView({
   templates: Template[]
   settings: CompanySettings
   quotes: Quote[]
+  ai: AiConfig
 }) {
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<string>('todos')
@@ -162,7 +167,16 @@ export function ContactsView({
           initialImage={dialog.image}
           initialImageId={dialog.image?.id ?? dialog.imageId}
           initialTemplateName={dialog.templateName}
+          initialMessage={dialog.message}
           onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.kind === 'analyze' && (
+        <AnalyzeChatDialog
+          contact={live(dialog.contact)}
+          ai={ai}
+          onClose={() => setDialog(null)}
+          onUseReply={(message) => setDialog({ kind: 'send', contact: dialog.contact, message })}
         />
       )}
       {dialog?.kind === 'quote' && (
@@ -171,6 +185,7 @@ export function ContactsView({
           contacts={dialog.from ? contacts : undefined}
           initial={dialog.from}
           company={settings}
+          ai={ai}
           onClose={() => setDialog(null)}
           onGenerated={(image, target) => {
             setSelectedId(target.id)
@@ -266,6 +281,7 @@ export function ContactsView({
             onSend={(imageId) => setDialog({ kind: 'send', contact: selected, imageId })}
             onQuote={() => setDialog({ kind: 'quote', contact: selected })}
             onDuplicate={(q) => setDialog({ kind: 'quote', contact: selected, from: q })}
+            onAnalyze={() => setDialog({ kind: 'analyze', contact: selected })}
           />
         ) : (
           <div className="hide-mobile">{dashboard(false)}</div>

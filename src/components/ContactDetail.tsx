@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconBack, IconCopy, IconEdit, IconFile, IconPhone, IconTrash, IconWhatsApp } from './icons'
+import { IconBack, IconCopy, IconEdit, IconFile, IconPhone, IconSparkle, IconTrash, IconWhatsApp } from './icons'
 import { dmy, money, QUOTE_STATUS, setQuoteStatus, useQuotes, type Quote, type QuoteStatus } from '../quotes'
 import { errorMessage, useToast } from './toast'
 import {
@@ -23,6 +23,7 @@ export function ContactDetail({
   onSend,
   onQuote,
   onDuplicate,
+  onAnalyze,
 }: {
   contact: Contact
   images: ImageItem[]
@@ -31,6 +32,7 @@ export function ContactDetail({
   onSend: (imageId?: string) => void
   onQuote: () => void
   onDuplicate: (q: Quote) => void
+  onAnalyze: () => void
 }) {
   const toast = useToast()
   const sends = useSends(contact.id)
@@ -103,9 +105,13 @@ export function ContactDetail({
           <IconPhone />
           Llamar
         </a>
-        <button className="btn btn-primary btn-lg detail-quote" onClick={onQuote}>
+        <button className="btn btn-primary btn-lg" onClick={onQuote}>
           <IconFile />
           Nueva cotización
+        </button>
+        <button className="btn btn-ghost btn-lg" onClick={onAnalyze} title="Analizar conversación con IA">
+          <IconSparkle />
+          Analizar chat
         </button>
       </div>
 
