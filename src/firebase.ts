@@ -6,7 +6,6 @@ import {
   persistentMultipleTabManager,
   type Firestore,
 } from 'firebase/firestore'
-import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -37,6 +36,5 @@ export const db = (
       })
     : null
 ) as Firestore
-export const storage = (app ? getStorage(app) : null) as FirebaseStorage
 export const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })

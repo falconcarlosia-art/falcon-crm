@@ -13,13 +13,13 @@ catálogos, sugerencias). Se publica en https://crm-falcons.web.app.
   - *Compartir imagen* (solo en el celular): adjunta la **imagen** con el
     menú Compartir del sistema. Hay que elegir el chat en WhatsApp, y el texto
     queda copiado por si WhatsApp lo descarta.
-- **Biblioteca**: imágenes reutilizables en Firebase Storage.
+- **Biblioteca**: imágenes reutilizables, guardadas en Firestore (sin Firebase Storage).
 - **Plantillas**: mensajes con `{nombre}`, `{nombre_completo}` y `{enlace}`.
 - **Cotizaciones**: desde la ficha, en *Nueva cotización*, eliges productos del
   catálogo de Supabase o agregas ítems libres, ajustas precio, cantidad,
-  fechas y condiciones, y la app genera un **PNG** y un **PDF** con el diseño
-  de marca. La imagen queda en la ficha del contacto y se abre directo el envío
-  por WhatsApp.
+  fechas y condiciones, y la app genera la cotización con el diseño de marca.
+  La imagen queda en la ficha del contacto (descargable como imagen o PDF) y se
+  abre directo el envío por WhatsApp.
   - Numeración `AAAA-DDMM-n`, correlativo por día (`2026-2509-1`). Se reserva
     con una transacción en `counters/quote-AAAA-DDMM`, así que requiere
     conexión.
@@ -54,14 +54,16 @@ catálogos, sugerencias). Se publica en https://crm-falcons.web.app.
     JSON se valida al leerlo.
   - La key vive en `private/ai` de Firestore (solo el dueño la lee) y se usa
     desde el navegador. Conviene ponerle un límite de crédito en OpenRouter.
-- **Enlaces cortos**: las imágenes se envían como `crm-falcons.web.app/v/xxxx`
-  en lugar de la URL larga de Storage. Esa página es pública y redirige a la
-  imagen. El código es aleatorio, así que no se pueden adivinar otras
-  cotizaciones. WhatsApp no muestra miniatura para estos enlaces, porque la
-  redirección ocurre en el navegador.
+- **Enlaces cortos**: las imágenes se envían como `crm-falcons.web.app/v/xxxx`.
+  Esa página es pública: muestra la imagen con botones para descargarla como
+  imagen o PDF. El código es aleatorio, así que no se pueden adivinar otras
+  cotizaciones. WhatsApp no muestra miniatura para estos enlaces.
 
-Stack: React, Vite y Firebase (Auth con Google, Firestore con caché offline y
-Storage).
+Stack: React, Vite y Firebase (Auth con Google y Firestore con caché offline).
+Funciona en el **plan gratuito Spark**: no usa Firebase Storage (que exige el
+plan Blaze). Las imágenes se guardan comprimidas (JPEG) en Firestore, en
+`files/{id}/chunks/{n}` de hasta ~900 KB cada uno, con una miniatura aparte
+para las listas. El PDF no se almacena: se genera al descargarlo.
 
 ## Puesta en marcha (una sola vez)
 
@@ -70,24 +72,15 @@ Storage).
      En *Settings → Authorized domains* deben figurar `crm-falcons.web.app` (ya viene por defecto) y
      `localhost`.
    - *Firestore Database* → crear la base de datos (modo producción).
-   - *Storage* → crear el bucket.
-   - *Configuración del proyecto* → *Tus apps* → registrar una app web y
-     copiar el `firebaseConfig`.
+   - No hace falta Storage ni el plan Blaze.
 2. La config de Firebase ya está en `.env.production` (es pública). Para
    desarrollo, copiarla a `.env.local`.
 3. Desplegar las reglas de seguridad, que solo permiten el correo del dueño:
    ```bash
    npx firebase-tools login
-   npx firebase-tools deploy --only firestore:rules,storage
+   npx firebase-tools deploy --only firestore:rules
    ```
-4. Habilitar CORS del bucket. Sin esto, "Compartir imagen" no puede
-   descargar las imágenes de la biblioteca:
-   ```bash
-   gcloud storage buckets update gs://crm-falcons.firebasestorage.app --cors-file=cors.json
-   ```
-   (o `gsutil cors set cors.json gs://<bucket>`).
-
-5. Catálogo de productos (Supabase). En `.env.production` van
+4. Catálogo de productos (Supabase). En `.env.production` van
    `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (nunca la `service_role`) y el
    mapeo de tabla y columnas `VITE_PRODUCTS_*` (ver `.env.example`). La anon key
    necesita permiso de lectura; si la tabla tiene RLS:
@@ -95,11 +88,11 @@ Storage).
    create policy "lectura publica de productos" on public.productos
      for select to anon using (true);
    ```
-   Si las fotos están en Storage, el bucket debe ser público para que las
-   miniaturas lleguen a la cotización.
+   Si las fotos de productos están en Supabase Storage, el bucket debe ser
+   público para que las miniaturas lleguen a la cotización.
 
-Para cambiar el correo con acceso, hay que editarlo en `firestore.rules`,
-`storage.rules` y `VITE_ALLOWED_EMAIL`.
+Para cambiar el correo con acceso, hay que editarlo en `firestore.rules` y
+`VITE_ALLOWED_EMAIL`.
 
 ## Desarrollo y despliegue
 
@@ -114,15 +107,20 @@ npm run build && npx firebase-tools deploy --only hosting
 | Colección | Contenido |
 | --- | --- |
 | `contacts/{id}` | `name`, `phone` (solo dígitos, con código de país), `stage`, `tags[]`, `notes`, `lastSentAt` |
-| `contacts/{id}/sends/{id}` | historial: `channel` (`link`/`share`), `message`, `imageUrl`, `templateName`, `sentAt` |
-| `images/{id}` | `name`, `url`, `path` en Storage, `contactId` (`null` = biblioteca) |
+| `contacts/{id}/sends/{id}` | historial: `channel` (`link`/`share`), `message`, `imageId`, `imageShortUrl`, `templateName`, `sentAt` |
+| `images/{id}` | `name`, `fileId`, `thumb` (miniatura), `shortUrl`, `contactId` (`null` = biblioteca) |
+| `files/{id}` y `files/{id}/chunks/{n}` | la imagen completa en base64, en trozos. Lectura pública solo por id |
 | `templates/{id}` | `name`, `body` |
-| `quotes/{id}` | `number`, `contactId`, `clientName`, `issueDate`, `validUntil`, `items[]`, `conditions`, `total`, `imageUrl`, `pdfUrl` |
+| `quotes/{id}` | `number`, `contactId`, `clientName`, `issueDate`, `validUntil`, `items[]`, `conditions`, `total`, `status`, `imageId`, `fileId`, `shortUrl` |
 | `counters/quote-AAAA-DDMM` | `last`: último correlativo del día |
 | `private/ai` | `apiKey` de OpenRouter, `quoteModel`, `chatModel` |
-| `links/{código}` | `url`: destino del enlace corto. Única colección de lectura pública (solo `get`) |
+| `links/{código}` | `fileId`, `name` del enlace corto. Lectura pública solo por código |
 | `settings/company` | datos de empresa, pagos, QR Yape (data URL), condiciones por defecto |
 
-Las imágenes se envían como URL de descarga con token de Storage. Quien
-recibe el enlace puede verla sin iniciar sesión. Si se borra la imagen, los
-enlaces ya enviados dejan de funcionar.
+Quien recibe el enlace puede ver la imagen sin iniciar sesión, pero nadie puede
+listar ni recorrer las colecciones. Si se borra la imagen, los enlaces ya
+enviados dejan de funcionar.
+
+Cuota gratuita de Firestore (Spark): 1 GiB guardado, 50.000 lecturas y 20.000
+escrituras por día. Una cotización ocupa ~0,5–1 MB, así que alcanza para
+cientos de cotizaciones e imágenes antes de pensar en limpiar o pagar.

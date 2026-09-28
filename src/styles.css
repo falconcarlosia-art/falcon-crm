@@ -576,3 +576,22 @@ select {
 .model-name, .model-price { display: grid; min-width: 0; }
 .model-name b, .model-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-price { text-align: right; flex: none; }
+
+/* ---- Página pública /v/{código} (lo que ve el cliente) ---- */
+.shared { min-height: 100%; background: #e9edf3; display: flex; flex-direction: column; }
+.shared-head {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--navy); color: #fff;
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+.shared-head strong { display: block; letter-spacing: 0.12em; font-size: 16px; line-height: 1; }
+.shared-head span { display: block; color: var(--yellow); letter-spacing: 0.3em; font-size: 10px; font-weight: 600; margin-top: 3px; }
+.shared-actions {
+  position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  padding: 10px 12px; background: rgba(233, 237, 243, 0.94); backdrop-filter: blur(6px);
+}
+.shared-img { display: block; width: 100%; max-width: 820px; margin: 0 auto 16px; background: #fff; box-shadow: 0 4px 24px rgba(15, 23, 36, 0.12); }
+.shared-msg { text-align: center; color: var(--muted); padding: 60px 16px; margin: 0; flex: 1; }
+.shared-foot { margin-top: auto; text-align: center; font-size: 12px; color: var(--muted); padding: 16px; }
+@media (min-width: 900px) {
+  .shared-actions { max-width: 820px; margin: 12px auto; width: 100%; padding: 0; background: none; backdrop-filter: none; position: static; }
+}

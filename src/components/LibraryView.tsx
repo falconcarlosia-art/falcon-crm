@@ -96,8 +96,8 @@ export function LibraryView({ images, contacts }: { images: ImageItem[]; contact
         >
           {shown.map((img) => (
             <figure key={img.id} className="lib-card">
-              <a href={img.url} target="_blank" rel="noreferrer">
-                <img src={img.url} alt={img.name} loading="lazy" />
+              <a href={img.shortUrl} target="_blank" rel="noreferrer">
+                <img src={img.thumb} alt={img.name} loading="lazy" />
               </a>
               <figcaption>
                 <span className="lib-name" title={img.name}>

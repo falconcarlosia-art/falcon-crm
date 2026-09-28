@@ -33,15 +33,17 @@ export interface Contact {
 export interface ImageItem {
   id: string
   name: string
-  url: string
-  path: string
+  /** Imagen completa en files/{fileId} (Firestore). */
+  fileId: string
+  /** Miniatura JPEG pequeña (data URL) para listas y grillas. */
+  thumb: string
   size: number
   contentType: string
   /** null = imagen de la biblioteca; si no, imagen subida para ese contacto. */
   contactId: string | null
-  /** Enlace corto (crm-falcons.web.app/v/xxxx) que se manda por WhatsApp. */
-  shortUrl?: string
-  shortCode?: string
+  /** Enlace público (crm-falcons.web.app/v/xxxx) que se manda por WhatsApp. */
+  shortUrl: string
+  shortCode: string
   createdAt?: Timestamp
 }
 
@@ -60,7 +62,7 @@ export interface SendRecord {
   message: string
   imageId: string | null
   imageName: string | null
-  imageUrl: string | null
+  imageShortUrl: string | null
   templateName: string | null
   sentAt?: Timestamp
 }

@@ -12,6 +12,7 @@ import {
   useSends,
 } from '../data'
 import { formatPhone } from '../phone'
+import { downloadBlob, imageToPdf, loadFile, safeFileName } from '../files'
 import { fullDate, initials } from '../format'
 import { STAGES, stageOf, type Contact, type ImageItem } from '../types'
 
@@ -43,6 +44,19 @@ export function ContactDetail({
 
   const report = (err: unknown) => toast(errorMessage(err), 'error')
   const followUp = contact.followUpAt?.toDate() ?? null
+
+  const thumbOf = (imageId: string | null) => images.find((i) => i.id === imageId)?.thumb
+
+  async function downloadQuote(q: Quote, kind: 'img' | 'pdf') {
+    try {
+      const blob = await loadFile(q.fileId)
+      const name = safeFileName(`Cotizacion_${q.number}_${q.clientName}`)
+      if (kind === 'img') downloadBlob(blob, `${name}.jpg`)
+      else downloadBlob(await imageToPdf(blob, `Cotización ${q.number}`), `${name}.pdf`)
+    } catch (err) {
+      report(err)
+    }
+  }
 
   function changeQuoteStatus(q: Quote, status: QuoteStatus) {
     setQuoteStatus(q.id, status).catch(report)
@@ -149,8 +163,8 @@ export function ContactDetail({
           <ul className="quote-list">
             {quotes.map((q) => (
               <li key={q.id}>
-                <a href={q.imageUrl} target="_blank" rel="noreferrer" className="quote-thumb">
-                  <img src={q.imageUrl} alt="" loading="lazy" />
+                <a href={q.shortUrl} target="_blank" rel="noreferrer" className="quote-thumb">
+                  {thumbOf(q.imageId) ? <img src={thumbOf(q.imageId)} alt="" loading="lazy" /> : <span className="qe-noimg" />}
                 </a>
                 <div className="quote-info">
                   <b>Nº {q.number}</b>
@@ -158,8 +172,9 @@ export function ContactDetail({
                     {dmy(q.issueDate)} · {q.items.length} ítem{q.items.length === 1 ? '' : 's'} · {money(q.total)}
                   </span>
                   <span className="quote-links">
-                    <a href={q.imageUrl} target="_blank" rel="noreferrer">PNG</a>
-                    <a href={q.pdfUrl} target="_blank" rel="noreferrer">PDF</a>
+                    <a href={q.shortUrl} target="_blank" rel="noreferrer">Ver</a>
+                    <button className="link-btn" onClick={() => downloadQuote(q, 'img')}>Imagen</button>
+                    <button className="link-btn" onClick={() => downloadQuote(q, 'pdf')}>PDF</button>
                     <button className="link-btn" onClick={() => onDuplicate(q)}>
                       <IconCopy width={13} height={13} /> Duplicar
                     </button>
@@ -231,8 +246,8 @@ export function ContactDetail({
           <div className="thumb-grid">
             {own.map((img) => (
               <div key={img.id} className="thumb thumb-static">
-                <a href={img.url} target="_blank" rel="noreferrer">
-                  <img src={img.url} alt={img.name} loading="lazy" />
+                <a href={img.shortUrl} target="_blank" rel="noreferrer">
+                  <img src={img.thumb} alt={img.name} loading="lazy" />
                 </a>
                 <span className="thumb-label">{img.name}</span>
                 <div className="thumb-tools">
@@ -282,9 +297,9 @@ export function ContactDetail({
                   </span>
                 </div>
                 <div className="timeline-body">
-                  {s.imageUrl && (
-                    <a href={s.imageUrl} target="_blank" rel="noreferrer" className="timeline-img">
-                      <img src={s.imageUrl} alt={s.imageName ?? ''} loading="lazy" />
+                  {s.imageId && thumbOf(s.imageId) && (
+                    <a href={s.imageShortUrl ?? undefined} target="_blank" rel="noreferrer" className="timeline-img">
+                      <img src={thumbOf(s.imageId)} alt={s.imageName ?? ''} loading="lazy" />
                     </a>
                   )}
                   <p className="timeline-msg">{s.message}</p>

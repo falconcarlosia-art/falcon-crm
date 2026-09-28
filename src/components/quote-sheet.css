@@ -60,7 +60,7 @@
 .qs-empty { text-align: center; font-style: italic; }
 .qs-note { color: var(--qs-muted); margin: 14px 0 20px; }
 .qs-totals { margin-left: auto; width: 330px; display: grid; gap: 6px; }
-.qs-totals > div { display: flex; justify-content: space-between; color: var(--qs-soft); }
+.qs-totals > div { display: flex; justify-content: space-between; gap: 16px; color: var(--qs-soft); white-space: nowrap; }
 .qs-totals .qs-total {
   margin-top: 10px; background: var(--qs-navy); color: #fff; padding: 16px 20px; align-items: center;
 }

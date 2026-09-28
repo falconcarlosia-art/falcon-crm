@@ -15,8 +15,8 @@ import {
   getDocs,
   type Query,
 } from 'firebase/firestore'
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { db, storage } from './firebase'
+import { db } from './firebase'
+import { deleteFile, prepareImage, saveFile } from './files'
 import type { Contact, ImageItem, SendChannel, SendRecord, Template } from './types'
 
 // Un solo usuario y pocos cientos de registros: se escucha la colección entera
@@ -144,7 +144,6 @@ export function recordSend(
       message: send.message,
       imageId: send.image?.id ?? null,
       imageName: send.image?.name ?? null,
-      imageUrl: send.image?.url ?? null,
       imageShortUrl: send.image?.shortUrl ?? null,
       templateName: send.templateName,
       sentAt: serverTimestamp(),
@@ -162,21 +161,28 @@ export function recordSend(
 
 // ---- Imágenes ----
 
-export async function uploadImage(file: File, contactId: string | null, name?: string): Promise<ImageItem> {
-  const safe = file.name.replace(/[^\w.-]+/g, '_')
-  const path = `${contactId ? `contacts/${contactId}` : 'library'}/${Date.now()}_${safe}`
-  const objRef = ref(storage, path)
-  await uploadBytes(objRef, file, { contentType: file.type, cacheControl: 'public, max-age=31536000' })
-  const url = await getDownloadURL(objRef)
-  const shortCode = await createShortLink(url)
+/**
+ * Comprime la imagen, la guarda en Firestore (files/) y crea su enlace público.
+ * Devuelve la ficha lista para usar aunque el snapshot aún no haya llegado.
+ */
+export async function uploadImage(
+  src: Blob,
+  contactId: string | null,
+  name?: string,
+  opts: { maxSide?: number; quality?: number } = {},
+): Promise<ImageItem> {
+  const { blob, thumb } = await prepareImage(src, opts.maxSide, opts.quality)
+  const { fileId, size, contentType } = await saveFile(blob)
+  const imgName = name ?? ((src as File).name ?? 'imagen').replace(/\.[^.]+$/, '')
+  const shortCode = await createShortLink(fileId, imgName)
   const data = {
-    name: name ?? file.name.replace(/\.[^.]+$/, ''),
-    url,
+    name: imgName,
+    fileId,
+    thumb,
     shortCode,
     shortUrl: shortLinkUrl(shortCode),
-    path,
-    size: file.size,
-    contentType: file.type,
+    size,
+    contentType,
     contactId,
     createdAt: serverTimestamp(),
   }
@@ -193,14 +199,9 @@ export function moveImageToLibrary(id: string) {
 }
 
 export async function deleteImage(img: ImageItem) {
-  try {
-    await deleteObject(ref(storage, img.path))
-  } catch (err) {
-    // Si el archivo ya no existe se borra igual la ficha.
-    if ((err as { code?: string }).code !== 'storage/object-not-found') throw err
-  }
   await deleteDoc(doc(db, 'images', img.id))
   if (img.shortCode) await deleteDoc(doc(db, 'links', img.shortCode))
+  if (img.fileId) await deleteFile(img.fileId)
 }
 
 // ---- Enlaces cortos ----
@@ -209,26 +210,26 @@ export async function deleteImage(img: ImageItem) {
 const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
 
 /**
- * links/{código} es la única colección de lectura pública: la página /v/{código}
- * la consulta sin sesión y redirige a la imagen. El código es aleatorio (no el
- * número de cotización) para que nadie pueda recorrer las cotizaciones de otros.
+ * links/{código} se lee sin sesión: la página /v/{código} lo resuelve y muestra
+ * la imagen. El código es aleatorio (no el número de cotización) para que nadie
+ * pueda recorrer las cotizaciones de otros.
  */
-export async function createShortLink(url: string): Promise<string> {
+export async function createShortLink(fileId: string, name: string): Promise<string> {
   const bytes = crypto.getRandomValues(new Uint8Array(8))
   const code = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('')
-  await setDoc(doc(db, 'links', code), { url, createdAt: serverTimestamp() })
+  await setDoc(doc(db, 'links', code), { fileId, name, createdAt: serverTimestamp() })
   return code
 }
 
 export const shortLinkUrl = (code: string) => `${window.location.origin}/v/${code}`
 
-export async function resolveShortLink(code: string): Promise<string | null> {
+export async function resolveShortLink(code: string): Promise<{ fileId: string; name: string } | null> {
   const snap = await getDoc(doc(db, 'links', code))
-  return snap.exists() ? (snap.data().url as string) : null
+  return snap.exists() ? (snap.data() as { fileId: string; name: string }) : null
 }
 
-/** URL para mandar por WhatsApp: la corta si existe (imágenes nuevas), si no la de Storage. */
-export const shareUrl = (img: Pick<ImageItem, 'url' | 'shortUrl'>) => img.shortUrl || img.url
+/** Lo que se manda por WhatsApp. */
+export const shareUrl = (img: Pick<ImageItem, 'shortUrl'>) => img.shortUrl
 
 // ---- Plantillas ----
 

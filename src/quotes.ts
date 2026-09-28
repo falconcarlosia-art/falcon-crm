@@ -11,8 +11,7 @@ import {
   where,
   type Timestamp,
 } from 'firebase/firestore'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { db, storage } from './firebase'
+import { db } from './firebase'
 import { uploadImage } from './data'
 import type { ImageItem } from './types'
 
@@ -55,10 +54,10 @@ export interface Quote {
   items: QuoteItem[]
   conditions: QuoteConditions
   total: number
+  /** Imagen de la cotización (images/{id}); el PNG/PDF se sirve desde su enlace. */
   imageId: string
-  imageUrl: string
-  imageShortUrl?: string
-  pdfUrl: string
+  fileId: string
+  shortUrl: string
   /** Ausente en cotizaciones antiguas: se trata como 'pendiente'. */
   status?: QuoteStatus
   createdAt?: Timestamp
@@ -240,8 +239,8 @@ export async function toDataUrl(src: string | Blob, maxSize: number): Promise<st
 // ---------- Generación ----------
 
 /**
- * Renderiza la hoja a PNG y PDF, los sube a Storage y guarda la cotización.
- * La imagen queda también como imagen del contacto, lista para el envío por WhatsApp.
+ * Rasteriza la hoja, la guarda como imagen del contacto (Firestore) y registra
+ * la cotización. El PDF no se almacena: se genera al descargarlo.
  */
 export async function generateQuote(opts: {
   node: HTMLElement
@@ -254,32 +253,12 @@ export async function generateQuote(opts: {
   conditions: QuoteConditions
 }): Promise<{ quote: Quote; image: ImageItem }> {
   const { toBlob } = await import('html-to-image')
-  const { jsPDF } = await import('jspdf')
   await document.fonts.ready
-
-  const width = opts.node.offsetWidth
-  const height = opts.node.offsetHeight
   const blob = await toBlob(opts.node, { pixelRatio: 2, cacheBust: true, backgroundColor: '#ffffff' })
   if (!blob) throw new Error('No se pudo generar la imagen')
 
-  const safeClient = opts.clientName.replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '')
-  const base = `Cotizacion_${opts.number}_${safeClient}`
-  const png = new File([blob], `${base}.png`, { type: 'image/png' })
-
-  // PDF de una sola página con el alto de la hoja: se lee igual que la imagen,
-  // sin cortes de página a mitad de tabla.
-  const pageW = 210
-  const pageH = (height / width) * pageW
-  const pdf = new jsPDF({ unit: 'mm', format: [pageW, pageH], orientation: 'portrait', compress: true })
-  const dataUrl = await blobToDataUrl(blob)
-  pdf.addImage(dataUrl, 'PNG', 0, 0, pageW, pageH, undefined, 'FAST')
-  pdf.setProperties({ title: `Cotización ${opts.number}`, author: 'Falcon Electronic del Perú' })
-  const pdfBlob = pdf.output('blob')
-
-  const image = await uploadImage(png, opts.contactId, `Cotización ${opts.number}`)
-  const pdfRef = ref(storage, `quotes/${opts.number}/${base}.pdf`)
-  await uploadBytes(pdfRef, pdfBlob, { contentType: 'application/pdf' })
-  const pdfUrl = await getDownloadURL(pdfRef)
+  // Lado mayor alto para que el texto de la hoja siga nítido al hacer zoom.
+  const image = await uploadImage(blob, opts.contactId, `Cotización ${opts.number}`, { maxSide: 4000, quality: 0.9 })
 
   const quoteRef = doc(collection(db, 'quotes'))
   const data = {
@@ -292,20 +271,10 @@ export async function generateQuote(opts: {
     conditions: opts.conditions,
     total: totals(opts.items).total,
     imageId: image.id,
-    imageUrl: image.url,
-    imageShortUrl: image.shortUrl ?? '',
-    pdfUrl,
+    fileId: image.fileId,
+    shortUrl: image.shortUrl,
     status: 'pendiente' as QuoteStatus,
   }
   await setDoc(quoteRef, { ...data, createdAt: serverTimestamp() })
   return { quote: { id: quoteRef.id, ...data }, image }
-}
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(r.result as string)
-    r.onerror = () => reject(r.error)
-    r.readAsDataURL(blob)
-  })
 }

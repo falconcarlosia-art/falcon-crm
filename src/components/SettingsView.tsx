@@ -54,7 +54,7 @@ export function SettingsView({ settings, ai }: { settings: CompanySettings; ai: 
   async function pickQr(file: File | undefined) {
     if (!file) return
     // Se guarda como data URL en Firestore: pesa poco y el render de la
-    // cotización no depende del CORS del bucket.
+    // cotización no necesita descargarlo de ningún lado.
     const data = await toDataUrl(file, 480)
     if (data) set({ yapeQr: data })
     else toast('No se pudo leer la imagen', 'error')

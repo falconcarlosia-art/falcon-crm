@@ -8,9 +8,11 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "deploy": "npm run build && firebase deploy --only hosting",
-    "deploy:rules": "firebase deploy --only firestore:rules,storage"
+    "deploy:rules": "firebase deploy --only firestore:rules"
   },
   "dependencies": {
+    "@fontsource/orbitron": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
     "@supabase/supabase-js": "^2.117.2",
     "firebase": "^12.19.0",
     "html-to-image": "^1.11.13",

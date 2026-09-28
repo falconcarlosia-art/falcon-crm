@@ -3,6 +3,7 @@ import { Modal } from './Modal'
 import { IconCheck, IconShare, IconUpload, IconWhatsApp } from './icons'
 import { errorMessage, useToast } from './toast'
 import { recordSend, shareUrl, uploadImage } from '../data'
+import { loadFile, useFileUrl } from '../files'
 import { formatPhone } from '../phone'
 import { canShareFiles, copyText, fillTemplate, waLink } from '../whatsapp'
 import type { Contact, ImageItem, Template } from '../types'
@@ -63,6 +64,7 @@ export function SendDialog({
 
   const image = choices.find((i) => i.id === imageId) ?? null
   const template = templates.find((t) => t.id === templateId) ?? templates[0] ?? null
+  const previewUrl = useFileUrl(image?.fileId)
 
   // Cambiar imagen o plantilla rehace el mensaje; luego se puede editar a mano.
   // Con un mensaje inicial, la combinación de arranque ya "está aplicada".
@@ -84,12 +86,11 @@ export function SendDialog({
     if (!image || !shareSupported) return
     if (uploaded?.item.id === image.id) return setShareFile(uploaded.file)
     let cancelled = false
-    fetch(image.url)
-      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+    loadFile(image.fileId)
       .then((blob) => {
         if (cancelled) return
         const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')
-        setShareFile(new File([blob], `${image.name}.${ext}`, { type: blob.type || 'image/png' }))
+        setShareFile(new File([blob], `${image.name}.${ext}`, { type: blob.type || 'image/jpeg' }))
       })
       .catch(() => !cancelled && setShareError(true))
     return () => {
@@ -133,7 +134,7 @@ export function SendDialog({
   async function shareImage() {
     if (!shareFile || !image) return
     // Al compartir, la imagen ya va adjunta: el enlace sobra en el texto.
-    const text = message.replace(shareUrl(image), '').replace(image.url, '').replace(/\n{3,}/g, '\n\n').trim()
+    const text = message.replace(shareUrl(image), '').replace(/\n{3,}/g, '\n\n').trim()
     // Algunas apps descartan el texto al recibir una imagen: queda en el
     // portapapeles para pegarlo como pie de foto si hiciera falta.
     const copied = await copyText(text)
@@ -172,8 +173,9 @@ export function SendDialog({
           <h3 className="section-title">1. Imagen referencial</h3>
           <div className="send-preview">
             {image ? (
-              <a href={image.url} target="_blank" rel="noreferrer">
-                <img src={image.url} alt={image.name} />
+              <a href={image.shortUrl} target="_blank" rel="noreferrer">
+                {/* La miniatura se ve al instante; la imagen completa la reemplaza al llegar. */}
+                <img src={previewUrl ?? image.thumb} alt={image.name} />
               </a>
             ) : (
               <div className="send-preview-empty">Sin imagen: solo se envía el texto</div>
@@ -195,7 +197,7 @@ export function SendDialog({
                 onClick={() => setImageId(img.id)}
                 title={img.name}
               >
-                <img src={img.url} alt={img.name} loading="lazy" />
+                <img src={img.thumb} alt={img.name} loading="lazy" />
                 {img.contactId && <span className="thumb-star">★</span>}
                 {imageId === img.id && (
                   <span className="thumb-check">
@@ -250,7 +252,7 @@ export function SendDialog({
           </p>
           {shareError && (
             <p className="hint hint-error small">
-              No se pudo descargar la imagen para compartirla (¿falta configurar CORS del bucket?). Usa
+              No se pudo preparar la imagen para compartirla. Usa
               "Abrir WhatsApp".
             </p>
           )}
