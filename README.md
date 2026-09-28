@@ -81,7 +81,9 @@ cotización siempre se dibuje igual, sin depender de Google Fonts.
    npx firebase-tools login
    npx firebase-tools deploy --only firestore:rules
    ```
-4. Catálogo de productos (Supabase). En `.env.production` van
+4. Catálogo de productos (Supabase). Ya está conectado a la tabla `products`
+   (`title`, `price`, primera foto de `images`, `sku`, solo `active`; también
+   se busca por `brand` y `model`). En `.env.production` van
    `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (nunca la `service_role`) y el
    mapeo de tabla y columnas `VITE_PRODUCTS_*` (ver `.env.example`). La anon key
    necesita permiso de lectura; si la tabla tiene RLS:

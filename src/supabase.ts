@@ -13,6 +13,11 @@ const cfg = {
   image: env.VITE_PRODUCTS_COL_IMAGE || '',
   sku: env.VITE_PRODUCTS_COL_SKU || '',
   active: env.VITE_PRODUCTS_COL_ACTIVE || '',
+  /** Columnas extra que entran en la búsqueda (p. ej. marca y modelo), separadas por coma. */
+  extra: ((env.VITE_PRODUCTS_COL_EXTRA as string | undefined) || '')
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean),
   bucket: env.VITE_PRODUCTS_IMAGE_BUCKET || '',
   priceWithoutIgv: env.VITE_PRODUCTS_PRICE_WITHOUT_IGV === 'true',
 }
@@ -27,6 +32,8 @@ export interface Product {
   price: number
   imageUrl: string | null
   sku: string | null
+  /** Texto extra para la búsqueda (marca, modelo…). */
+  keywords?: string
 }
 
 let cache: Promise<Product[]> | null = null
@@ -44,7 +51,7 @@ export function loadProducts(force = false): Promise<Product[]> {
 }
 
 async function fetchAll(sb: SupabaseClient): Promise<Product[]> {
-  const cols = [cfg.id, cfg.name, cfg.price, cfg.image, cfg.sku].filter(Boolean).join(',')
+  const cols = [cfg.id, cfg.name, cfg.price, cfg.image, cfg.sku, ...cfg.extra].filter(Boolean).join(',')
   const out: Product[] = []
   const PAGE = 1000
   for (let from = 0; ; from += PAGE) {
@@ -68,9 +75,14 @@ async function fetchAll(sb: SupabaseClient): Promise<Product[]> {
 function toProduct(sb: SupabaseClient, r: Record<string, unknown>): Product {
   let price = Number(r[cfg.price] ?? 0) || 0
   if (cfg.priceWithoutIgv) price = Math.round(price * 1.18 * 100) / 100
-  let img = cfg.image ? ((r[cfg.image] as string | null) ?? null) : null
+  // La columna de imagen puede ser un texto o una lista de fotos: se usa la primera.
+  const raw = cfg.image ? r[cfg.image] : null
+  let img = (Array.isArray(raw) ? raw.find((x) => typeof x === 'string' && x) : raw) as string | null | undefined
+  img = typeof img === 'string' ? img.trim() : null
   if (img && !/^https?:|^data:/.test(img) && cfg.bucket) {
     img = sb.storage.from(cfg.bucket).getPublicUrl(img).data.publicUrl
+  } else if (img && !/^https?:|^data:/.test(img)) {
+    img = null // ruta relativa sin bucket configurado: no hay de dónde cargarla
   }
   return {
     id: String(r[cfg.id]),
@@ -78,6 +90,7 @@ function toProduct(sb: SupabaseClient, r: Record<string, unknown>): Product {
     price,
     imageUrl: img || null,
     sku: cfg.sku && r[cfg.sku] != null ? String(r[cfg.sku]) : null,
+    keywords: cfg.extra.map((c) => (r[c] == null ? '' : String(r[c]))).join(' '),
   }
 }
 
@@ -86,7 +99,7 @@ export function searchProducts(all: Product[], text: string): Product[] {
   if (!words.length) return all.slice(0, 30)
   return all
     .filter((p) => {
-      const hay = normalize(`${p.name} ${p.sku ?? ''}`)
+      const hay = normalize(`${p.name} ${p.sku ?? ''} ${p.keywords ?? ''}`)
       return words.every((w) => hay.includes(w))
     })
     .slice(0, 30)
