@@ -65,7 +65,7 @@ Storage).
 
 ## Puesta en marcha (una sola vez)
 
-1. En la consola de Firebase del proyecto **falcon-crm**:
+1. En la consola de Firebase del proyecto **crm-falcons**:
    - *Authentication* → Sign-in method → habilitar **Google**.
      En *Settings → Authorized domains* deben figurar `falcon-crm.web.app` y
      `localhost`.
@@ -73,9 +73,8 @@ Storage).
    - *Storage* → crear el bucket.
    - *Configuración del proyecto* → *Tus apps* → registrar una app web y
      copiar el `firebaseConfig`.
-2. Copiar `.env.example` a `.env.production` (para el despliegue) y a
-   `.env.local` (para desarrollo), y completar los valores. Son públicos,
-   así que `.env.production` se puede versionar.
+2. La config de Firebase ya está en `.env.production` (es pública). Para
+   desarrollo, copiarla a `.env.local`.
 3. Desplegar las reglas de seguridad, que solo permiten el correo del dueño:
    ```bash
    npx firebase-tools login
@@ -84,7 +83,7 @@ Storage).
 4. Habilitar CORS del bucket. Sin esto, "Compartir imagen" no puede
    descargar las imágenes de la biblioteca:
    ```bash
-   gcloud storage buckets update gs://falcon-crm.firebasestorage.app --cors-file=cors.json
+   gcloud storage buckets update gs://crm-falcons.firebasestorage.app --cors-file=cors.json
    ```
    (o `gsutil cors set cors.json gs://<bucket>`).
 
