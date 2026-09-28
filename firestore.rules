@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// CRM de un solo usuario: todo el contenido es del dueño y nadie más lo lee.
+// Si cambia el correo, actualizar también storage.rules y VITE_ALLOWED_EMAIL.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == 'carlos.falcon.tbp@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    match /{document=**} {
+      allow read, write: if isOwner();
+    }
+  }
+}

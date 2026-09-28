@@ -1,0 +1,11 @@
+[
+  {
+    "origin": [
+      "https://falcon-crm.web.app",
+      "https://falcon-crm.firebaseapp.com",
+      "http://localhost:5174"
+    ],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]

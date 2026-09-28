@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// Solo el dueño sube, lista o borra. Los enlaces que se mandan por WhatsApp
+// son URLs de descarga con token, que Storage sirve sin pasar por estas reglas:
+// así el cliente ve la imagen sin iniciar sesión, pero no puede listar el bucket.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == 'carlos.falcon.tbp@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    match /{allPaths=**} {
+      allow read, delete: if isOwner();
+      allow create, update: if isOwner()
+        && request.resource.size < 15 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType == 'application/pdf');
+    }
+  }
+}

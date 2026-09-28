@@ -1,0 +1,9 @@
+{
+  "name": "Falcon CRM",
+  "short_name": "Falcon CRM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1724",
+  "theme_color": "#0f1724",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -1,0 +1,83 @@
+/* Hoja de cotización: medidas fijas en px porque se rasteriza tal cual. */
+.qs {
+  --qs-navy: #111827;
+  --qs-orange: #f7941d;
+  --qs-yellow: #f5b400;
+  --qs-muted: #7b8aa3;
+  --qs-soft: #4b5563;
+  --qs-line: #e5e7eb;
+  width: 760px;
+  background: #fff;
+  color: #111827;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+}
+.qs * { box-sizing: border-box; }
+.qs b { font-weight: 600; }
+.qs-soft { color: var(--qs-soft); }
+.qs-label {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--qs-muted);
+}
+.qs-label-orange { color: #8a97ad; }
+.qs-mt { margin-top: 16px; }
+.qs-mt-s { margin-top: 8px; }
+.qs-right { text-align: right; }
+
+.qs-head {
+  background: var(--qs-navy); color: #fff; padding: 30px 34px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.qs-brand { display: flex; align-items: center; gap: 16px; }
+.qs-brand-name { font-family: 'Orbitron', 'Poppins', sans-serif; font-size: 25px; font-weight: 600; letter-spacing: 0.06em; }
+.qs-brand-sub { font-family: 'Orbitron', 'Poppins', sans-serif; font-size: 11px; letter-spacing: 0.34em; color: var(--qs-yellow); margin-top: 4px; }
+.qs-title { text-align: right; }
+.qs-title-main { font-family: 'Orbitron', 'Poppins', sans-serif; font-size: 27px; font-weight: 700; color: var(--qs-yellow); letter-spacing: 0.08em; }
+.qs-title-num { font-size: 18px; margin-top: 4px; }
+
+.qs-company, .qs-client {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 26px 34px;
+  border-bottom: 1px solid var(--qs-line);
+}
+.qs-legal { font-weight: 700; font-size: 17px; }
+.qs-client-name { font-size: 21px; font-weight: 700; margin-top: 4px; }
+.qs-client .qs-soft b { color: #111827; font-weight: 500; margin-left: 8px; }
+
+.qs-items { padding: 22px 34px 26px; border-bottom: 1px solid var(--qs-line); }
+.qs-items table { width: 100%; border-collapse: collapse; }
+.qs-items th {
+  text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--qs-muted); padding: 0 6px 12px; border-bottom: 2px solid var(--qs-yellow); vertical-align: bottom;
+}
+.qs-items td { padding: 14px 6px; border-bottom: 1px solid var(--qs-line); vertical-align: middle; }
+.qs-items .qs-num { text-align: right; white-space: nowrap; }
+.qs-items .qs-qty { text-align: center; width: 70px; }
+.qs-items th:first-child, .qs-items td:first-child { padding-left: 0; }
+.qs-items th:last-child, .qs-items td:last-child { padding-right: 0; }
+.qs-desc { display: flex; align-items: center; gap: 12px; }
+.qs-desc img { width: 62px; height: 62px; object-fit: cover; border-radius: 4px; flex: none; }
+.qs-desc b { font-weight: 700; }
+.qs-empty { text-align: center; font-style: italic; }
+.qs-note { color: var(--qs-muted); margin: 14px 0 20px; }
+.qs-totals { margin-left: auto; width: 330px; display: grid; gap: 6px; }
+.qs-totals > div { display: flex; justify-content: space-between; color: var(--qs-soft); }
+.qs-totals .qs-total {
+  margin-top: 10px; background: var(--qs-navy); color: #fff; padding: 16px 20px; align-items: center;
+}
+.qs-total span:first-child { font-family: 'Orbitron', 'Poppins', sans-serif; font-size: 15px; letter-spacing: 0.14em; }
+.qs-total span:last-child { font-family: 'Orbitron', 'Poppins', sans-serif; font-size: 25px; font-weight: 700; color: var(--qs-yellow); }
+
+.qs-bottom { display: grid; grid-template-columns: 1fr 330px; gap: 32px; padding: 30px 34px 10px; }
+.qs-conds { display: grid; gap: 12px; align-content: start; }
+.qs-conds .qs-label { margin-bottom: 2px; }
+.qs-pay { background: #f1f4f8; padding: 22px 26px; font-size: 16px; display: grid; align-content: start; }
+.qs-yape { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; }
+.qs-yape img { width: 124px; height: 124px; object-fit: contain; background: #fff; padding: 6px; border: 1px solid var(--qs-line); }
+.qs-yape-label { color: var(--qs-orange); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; }
+.qs-card { border-top: 1px solid #d8dee8; margin-top: 16px; padding-top: 14px; }
+.qs-card b { font-weight: 700; }
+
+.qs-commercial { padding: 14px 34px 28px; }
+.qs-foot { background: var(--qs-navy); padding: 20px 34px; }
+.qs-foot-thanks { font-family: 'Orbitron', 'Poppins', sans-serif; color: var(--qs-yellow); font-size: 14px; letter-spacing: 0.12em; font-weight: 600; }
+.qs-foot-legal { color: #9ca3af; font-size: 12px; margin-top: 4px; }
