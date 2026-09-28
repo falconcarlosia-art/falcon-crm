@@ -1,24 +1,32 @@
 import { useState } from 'react'
 import { IconBack, IconCopy, IconEdit, IconFile, IconPhone, IconSparkle, IconTrash, IconWhatsApp } from './icons'
-import { dmy, money, QUOTE_STATUS, setQuoteStatus, useQuotes, type Quote, type QuoteStatus } from '../quotes'
+import {
+  dmy,
+  money,
+  QUOTE_STATUS,
+  setQuoteStatus,
+  useQuotes,
+  type CompanySettings,
+  type Quote,
+  type QuoteStatus,
+} from '../quotes'
 import { errorMessage, useToast } from './toast'
 import {
   deleteContact,
-  deleteImage,
   followUpDate,
-  moveImageToLibrary,
   setFollowUp,
   updateContact,
   useSends,
 } from '../data'
 import { formatPhone } from '../phone'
-import { downloadBlob, imageToPdf, loadFile, safeFileName } from '../files'
+import { downloadBlob } from '../files'
+import { renderQuoteFiles } from '../renderQuote'
 import { fullDate, initials } from '../format'
-import { STAGES, stageOf, type Contact, type ImageItem } from '../types'
+import { STAGES, stageOf, type Contact } from '../types'
 
 export function ContactDetail({
   contact,
-  images,
+  company,
   onBack,
   onEdit,
   onSend,
@@ -27,10 +35,11 @@ export function ContactDetail({
   onAnalyze,
 }: {
   contact: Contact
-  images: ImageItem[]
+  company: CompanySettings
   onBack: () => void
   onEdit: () => void
-  onSend: (imageId?: string) => void
+  /** Abre el envío; con quoteId, adjuntando esa cotización. */
+  onSend: (quoteId?: string) => void
   onQuote: () => void
   onDuplicate: (q: Quote) => void
   onAnalyze: () => void
@@ -39,22 +48,24 @@ export function ContactDetail({
   const sends = useSends(contact.id)
   const quotes = useQuotes(contact.id)
   const [notes, setNotes] = useState(contact.notes)
-  const own = images.filter((i) => i.contactId === contact.id)
+  const [busyQuote, setBusyQuote] = useState<string | null>(null)
   const stage = stageOf(contact.stage)
 
   const report = (err: unknown) => toast(errorMessage(err), 'error')
   const followUp = contact.followUpAt?.toDate() ?? null
 
-  const thumbOf = (imageId: string | null) => images.find((i) => i.id === imageId)?.thumb
-
+  /** Imagen y PDF no están guardados: se vuelven a dibujar desde los datos. */
   async function downloadQuote(q: Quote, kind: 'img' | 'pdf') {
+    setBusyQuote(q.id)
     try {
-      const blob = await loadFile(q.fileId)
-      const name = safeFileName(`Cotizacion_${q.number}_${q.clientName}`)
-      if (kind === 'img') downloadBlob(blob, `${name}.jpg`)
-      else downloadBlob(await imageToPdf(blob, `Cotización ${q.number}`), `${name}.pdf`)
+      const f = await renderQuoteFiles(q, company)
+      const file = kind === 'img' ? f.jpg : f.pdf
+      downloadBlob(file, file.name)
+      URL.revokeObjectURL(f.previewUrl)
     } catch (err) {
       report(err)
+    } finally {
+      setBusyQuote(null)
     }
   }
 
@@ -75,10 +86,10 @@ export function ContactDetail({
   }
 
   async function remove() {
-    if (!confirm(`¿Eliminar a ${contact.name}? Se borran también su historial y sus imágenes.`)) return
+    if (!confirm(`¿Eliminar a ${contact.name}? Se borra también su historial de envíos.`)) return
     onBack()
     try {
-      await deleteContact(contact.id, images)
+      await deleteContact(contact.id)
       toast('Contacto eliminado')
     } catch (err) {
       toast(errorMessage(err), 'error')
@@ -163,18 +174,21 @@ export function ContactDetail({
           <ul className="quote-list">
             {quotes.map((q) => (
               <li key={q.id}>
-                <a href={q.shortUrl} target="_blank" rel="noreferrer" className="quote-thumb">
-                  {thumbOf(q.imageId) ? <img src={thumbOf(q.imageId)} alt="" loading="lazy" /> : <span className="qe-noimg" />}
-                </a>
+                <span className="quote-icon">
+                  <IconFile />
+                </span>
                 <div className="quote-info">
                   <b>Nº {q.number}</b>
                   <span className="muted small">
                     {dmy(q.issueDate)} · {q.items.length} ítem{q.items.length === 1 ? '' : 's'} · {money(q.total)}
                   </span>
                   <span className="quote-links">
-                    <a href={q.shortUrl} target="_blank" rel="noreferrer">Ver</a>
-                    <button className="link-btn" onClick={() => downloadQuote(q, 'img')}>Imagen</button>
-                    <button className="link-btn" onClick={() => downloadQuote(q, 'pdf')}>PDF</button>
+                    <button className="link-btn" onClick={() => downloadQuote(q, 'pdf')} disabled={busyQuote === q.id}>
+                      PDF
+                    </button>
+                    <button className="link-btn" onClick={() => downloadQuote(q, 'img')} disabled={busyQuote === q.id}>
+                      Imagen
+                    </button>
                     <button className="link-btn" onClick={() => onDuplicate(q)}>
                       <IconCopy width={13} height={13} /> Duplicar
                     </button>
@@ -192,7 +206,7 @@ export function ContactDetail({
                     ))}
                   </span>
                 </div>
-                <button className="wa-quick" onClick={() => onSend(q.imageId)} aria-label={`Enviar cotización ${q.number}`}>
+                <button className="wa-quick" onClick={() => onSend(q.id)} aria-label={`Enviar cotización ${q.number}`}>
                   <IconWhatsApp />
                 </button>
               </li>
@@ -240,46 +254,6 @@ export function ContactDetail({
         />
       </section>
 
-      {own.length > 0 && (
-        <section className="card">
-          <h3 className="section-title">Imágenes de este contacto</h3>
-          <div className="thumb-grid">
-            {own.map((img) => (
-              <div key={img.id} className="thumb thumb-static">
-                <a href={img.shortUrl} target="_blank" rel="noreferrer">
-                  <img src={img.thumb} alt={img.name} loading="lazy" />
-                </a>
-                <span className="thumb-label">{img.name}</span>
-                <div className="thumb-tools">
-                  <button onClick={() => onSend(img.id)} title="Enviar">
-                    <IconWhatsApp width={16} height={16} />
-                  </button>
-                  <button
-                    onClick={() =>
-                      moveImageToLibrary(img.id)
-                        .then(() => toast('Movida a la biblioteca'))
-                        .catch((err) => toast(errorMessage(err), 'error'))
-                    }
-                    title="Mover a la biblioteca"
-                  >
-                    ★
-                  </button>
-                  <button
-                    onClick={() =>
-                      confirm(`¿Eliminar "${img.name}"? El enlace ya enviado dejará de funcionar.`) &&
-                      deleteImage(img).catch((err) => toast(errorMessage(err), 'error'))
-                    }
-                    title="Eliminar"
-                  >
-                    <IconTrash width={16} height={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="card">
         <h3 className="section-title">Historial de envíos</h3>
         {sends.loading ? (
@@ -293,14 +267,14 @@ export function ContactDetail({
                 <div className="timeline-head">
                   <b>{s.templateName ?? 'Mensaje'}</b>
                   <span className="muted small">
-                    {fullDate(s.sentAt)} · {s.channel === 'share' ? 'imagen compartida' : 'chat abierto'}
+                    {fullDate(s.sentAt)} · {s.channel === 'share' ? 'compartido desde el celular' : 'chat abierto'}
                   </span>
                 </div>
                 <div className="timeline-body">
-                  {s.imageId && thumbOf(s.imageId) && (
-                    <a href={s.imageShortUrl ?? undefined} target="_blank" rel="noreferrer" className="timeline-img">
-                      <img src={thumbOf(s.imageId)} alt={s.imageName ?? ''} loading="lazy" />
-                    </a>
+                  {s.quoteNumber && (
+                    <span className="timeline-quote">
+                      <IconFile width={14} height={14} /> Nº {s.quoteNumber}
+                    </span>
                   )}
                   <p className="timeline-msg">{s.message}</p>
                 </div>

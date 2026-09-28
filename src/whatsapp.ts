@@ -3,18 +3,34 @@ export function waLink(phone: string, message: string): string {
   return `https://wa.me/${phone}${text ? `?text=${encodeURIComponent(text)}` : ''}`
 }
 
+export interface TemplateVars {
+  name: string
+  /** Número de cotización (2026-2809-1) si el envío es de una cotización. */
+  number?: string | null
+  /** Total formateado (S/ 160.00). */
+  total?: string | null
+}
+
 /**
- * Rellena {nombre}, {nombre_completo} y {enlace}. Sin imagen, las líneas que
- * solo servían para el enlace desaparecen en vez de quedar con un hueco.
+ * Rellena {nombre}, {nombre_completo}, {numero} y {total}. Las líneas que usan
+ * un dato ausente (p. ej. {numero} en un mensaje sin cotización) se quitan en
+ * vez de quedar con un hueco. {enlace} de plantillas antiguas ya no existe y
+ * también se quita.
  */
-export function fillTemplate(body: string, vars: { name: string; link: string | null }): string {
+export function fillTemplate(body: string, vars: TemplateVars): string {
   const firstName = vars.name.trim().split(/\s+/)[0] ?? ''
-  const lines = body.split('\n').filter((line) => vars.link || !line.includes('{enlace}'))
-  return lines
+  const values: Record<string, string | null | undefined> = {
+    nombre_completo: vars.name.trim(),
+    nombre: firstName,
+    numero: vars.number,
+    total: vars.total,
+    enlace: null,
+  }
+  return body
+    .split('\n')
+    .filter((line) => !Object.entries(values).some(([k, v]) => !v && line.includes(`{${k}}`)))
     .join('\n')
-    .replace(/\{nombre_completo\}/g, vars.name.trim())
-    .replace(/\{nombre\}/g, firstName)
-    .replace(/\{enlace\}/g, vars.link ?? '')
+    .replace(/\{(nombre_completo|nombre|numero|total)\}/g, (_, k: string) => values[k] ?? '')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }

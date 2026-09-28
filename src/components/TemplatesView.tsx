@@ -6,7 +6,7 @@ import { deleteTemplate, saveTemplate } from '../data'
 import { fillTemplate } from '../whatsapp'
 import type { Template } from '../types'
 
-const SAMPLE = { name: 'Pedro Ramírez', link: 'https://crm-falcons.web.app/v/k7m3q9xa' }
+const SAMPLE = { name: 'Pedro Ramírez', number: '2026-2809-1', total: 'S/ 160.00' }
 
 export function TemplatesView({ templates }: { templates: Template[] }) {
   const toast = useToast()
@@ -27,8 +27,9 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         <div>
           <h2>Plantillas de mensaje</h2>
           <p className="muted small">
-            Variables: <code>{'{nombre}'}</code> (primer nombre), <code>{'{nombre_completo}'}</code> y{' '}
-            <code>{'{enlace}'}</code> (link de la imagen; si envías sin imagen, esa línea se quita).
+            Variables: <code>{'{nombre}'}</code> (primer nombre), <code>{'{nombre_completo}'}</code>,{' '}
+            <code>{'{numero}'}</code> y <code>{'{total}'}</code> de la cotización (si envías sin cotización, esas
+            líneas se quitan).
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setEditing({ name: '', body: 'Hola {nombre}, ' })}>

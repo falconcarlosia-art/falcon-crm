@@ -12,13 +12,14 @@ import type { AiConfig } from '../ai'
 import { AnalyzeChatDialog } from './AnalyzeChatDialog'
 import { formatPhone } from '../phone'
 import { initials, relDate } from '../format'
-import { STAGES, stageOf, type Contact, type ImageItem, type Template } from '../types'
+import { STAGES, stageOf, type Contact, type Template } from '../types'
+import type { QuoteFiles } from '../files'
 
 type Dialog =
   | { kind: 'new' }
   | { kind: 'edit'; contact: Contact }
   | { kind: 'import' }
-  | { kind: 'send'; contact: Contact; image?: ImageItem; imageId?: string; templateName?: string; message?: string }
+  | { kind: 'send'; contact: Contact; quoteId?: string; quote?: Quote; files?: QuoteFiles; templateName?: string; message?: string }
   | { kind: 'analyze'; contact: Contact }
   | { kind: 'quote'; contact: Contact; from?: Quote }
   | null
@@ -36,7 +37,6 @@ function loadView(): View {
 export function ContactsView({
   contacts,
   loading,
-  images,
   templates,
   settings,
   quotes,
@@ -44,7 +44,6 @@ export function ContactsView({
 }: {
   contacts: Contact[]
   loading: boolean
-  images: ImageItem[]
   templates: Template[]
   settings: CompanySettings
   quotes: Quote[]
@@ -162,10 +161,12 @@ export function ContactsView({
       {dialog?.kind === 'send' && (
         <SendDialog
           contact={live(dialog.contact)}
-          images={images}
+          quotes={quotes.filter((q) => q.contactId === dialog.contact.id).sort(byNewest)}
+          company={settings}
           templates={templates}
-          initialImage={dialog.image}
-          initialImageId={dialog.image?.id ?? dialog.imageId}
+          initialQuoteId={dialog.quoteId}
+          initialQuote={dialog.quote}
+          initialFiles={dialog.files}
           initialTemplateName={dialog.templateName}
           initialMessage={dialog.message}
           onClose={() => setDialog(null)}
@@ -187,9 +188,9 @@ export function ContactsView({
           company={settings}
           ai={ai}
           onClose={() => setDialog(null)}
-          onGenerated={(image, target) => {
+          onGenerated={(quote, files, target) => {
             setSelectedId(target.id)
-            setDialog({ kind: 'send', contact: target, image, templateName: 'Cotización' })
+            setDialog({ kind: 'send', contact: target, quote, files, templateName: 'Cotización' })
           }}
         />
       )}
@@ -275,10 +276,10 @@ export function ContactsView({
           <ContactDetail
             key={selected.id}
             contact={selected}
-            images={images}
+            company={settings}
             onBack={() => setSelectedId(null)}
             onEdit={() => setDialog({ kind: 'edit', contact: selected })}
-            onSend={(imageId) => setDialog({ kind: 'send', contact: selected, imageId })}
+            onSend={(quoteId) => setDialog({ kind: 'send', contact: selected, quoteId })}
             onQuote={() => setDialog({ kind: 'quote', contact: selected })}
             onDuplicate={(q) => setDialog({ kind: 'quote', contact: selected, from: q })}
             onAnalyze={() => setDialog({ kind: 'analyze', contact: selected })}
@@ -296,3 +297,5 @@ export function ContactsView({
     </div>
   )
 }
+
+const byNewest = (a: Quote, b: Quote) => (b.createdAt?.toMillis() ?? Infinity) - (a.createdAt?.toMillis() ?? Infinity)

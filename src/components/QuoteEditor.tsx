@@ -6,7 +6,7 @@ import { errorMessage, useToast } from './toast'
 import { loadProducts, productsConfigured, searchProducts, type Product } from '../supabase'
 import {
   addDaysISO,
-  generateQuote,
+  saveQuote,
   money,
   nextQuoteNumber,
   toDataUrl,
@@ -14,9 +14,12 @@ import {
   totals,
   type CompanySettings,
   type QuoteConditions,
+  type Quote,
   type QuoteItem,
 } from '../quotes'
-import type { Contact, ImageItem } from '../types'
+import type { Contact } from '../types'
+import { buildQuoteFiles, rasterize, type QuoteFiles } from '../files'
+import { quoteBaseName } from '../renderQuote'
 import { aiReady, usd, type AiConfig } from '../ai'
 import { quoteFromMessage, type AiQuote } from '../aiTasks'
 import { IconSparkle } from './icons'
@@ -46,7 +49,8 @@ export function QuoteEditor({
   company: CompanySettings
   ai: AiConfig
   onClose: () => void
-  onGenerated: (image: ImageItem, contact: Contact) => void
+  /** La cotización guardada (solo datos) y sus archivos recién generados, para enviarlos. */
+  onGenerated: (quote: Quote, files: QuoteFiles, contact: Contact) => void
 }) {
   const toast = useToast()
   const [contactId, setContactId] = useState(initialContact.id)
@@ -143,8 +147,9 @@ export function QuoteEditor({
         setNumber(n)
         setMobileTab('preview')
       })
-      const { image } = await generateQuote({
-        node: sheetRef.current,
+      // Se rasteriza la misma vista previa que se ve en pantalla.
+      const jpg = await rasterize(sheetRef.current)
+      const quote = await saveQuote({
         number: n,
         contactId: contact.id,
         clientName: clientName.trim(),
@@ -153,8 +158,9 @@ export function QuoteEditor({
         items,
         conditions,
       })
+      const files = await buildQuoteFiles(jpg, quoteBaseName(quote), `Cotización ${n}`)
       toast(`Cotización ${n} generada`)
-      onGenerated(image, contact)
+      onGenerated(quote, files, contact)
     } catch (err) {
       toast(errorMessage(err), 'error')
       setBusy(false)

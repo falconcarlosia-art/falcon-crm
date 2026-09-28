@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, type User } from 'firebase/auth'
 import { ALLOWED_EMAIL, auth, configured, googleProvider } from './firebase'
-import { seedTemplatesOnce, useContacts, useImages, useTemplates } from './data'
+import { seedTemplatesOnce, useContacts, useTemplates } from './data'
 import { ContactsView } from './components/ContactsView'
-import { LibraryView } from './components/LibraryView'
 import { TemplatesView } from './components/TemplatesView'
 import { SettingsView } from './components/SettingsView'
 import { useAllQuotes, useSettings } from './quotes'
 import { useAiConfig } from './ai'
-import { IconImage, IconLogout, IconMessage, IconSettings, IconUsers } from './components/icons'
+import { IconLogout, IconMessage, IconSettings, IconUsers } from './components/icons'
 import { errorMessage, useToast } from './components/toast'
 
 function Brand() {
@@ -100,10 +99,9 @@ function AuthGate() {
   return <Shell user={user} />
 }
 
-type Tab = 'contactos' | 'biblioteca' | 'plantillas' | 'ajustes'
+type Tab = 'contactos' | 'plantillas' | 'ajustes'
 const TABS: { id: Tab; label: string; Icon: typeof IconUsers }[] = [
   { id: 'contactos', label: 'Contactos', Icon: IconUsers },
-  { id: 'biblioteca', label: 'Biblioteca', Icon: IconImage },
   { id: 'plantillas', label: 'Plantillas', Icon: IconMessage },
   { id: 'ajustes', label: 'Ajustes', Icon: IconSettings },
 ]
@@ -112,7 +110,6 @@ function Shell({ user }: { user: User }) {
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('contactos')
   const contacts = useContacts()
-  const images = useImages()
   const templates = useTemplates()
   const settings = useSettings()
   const quotes = useAllQuotes()
@@ -122,7 +119,7 @@ function Shell({ user }: { user: User }) {
     seedTemplatesOnce().catch((err) => toast(errorMessage(err), 'error'))
   }, [toast])
 
-  const firstError = contacts.error ?? images.error ?? templates.error
+  const firstError = contacts.error ?? templates.error
   useEffect(() => {
     if (firstError) toast(errorMessage(firstError), 'error')
   }, [firstError, toast])
@@ -151,14 +148,12 @@ function Shell({ user }: { user: User }) {
           <ContactsView
             contacts={contacts.data}
             loading={contacts.loading}
-            images={images.data}
             templates={templates.data}
             settings={settings}
             quotes={quotes}
             ai={ai}
           />
         )}
-        {tab === 'biblioteca' && <LibraryView images={images.data} contacts={contacts.data} />}
         {tab === 'plantillas' && <TemplatesView templates={templates.data} />}
         {tab === 'ajustes' && <SettingsView settings={settings} ai={ai} />}
       </main>

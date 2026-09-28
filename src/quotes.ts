@@ -12,8 +12,6 @@ import {
   type Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { uploadImage } from './data'
-import type { ImageItem } from './types'
 
 // ---------- Tipos ----------
 
@@ -54,10 +52,6 @@ export interface Quote {
   items: QuoteItem[]
   conditions: QuoteConditions
   total: number
-  /** Imagen de la cotización (images/{id}); el PNG/PDF se sirve desde su enlace. */
-  imageId: string
-  fileId: string
-  shortUrl: string
   /** Ausente en cotizaciones antiguas: se trata como 'pendiente'. */
   status?: QuoteStatus
   createdAt?: Timestamp
@@ -236,45 +230,17 @@ export async function toDataUrl(src: string | Blob, maxSize: number): Promise<st
   }
 }
 
-// ---------- Generación ----------
+// ---------- Guardado ----------
+
+export type QuoteInput = Omit<Quote, 'id' | 'total' | 'status' | 'createdAt'>
 
 /**
- * Rasteriza la hoja, la guarda como imagen del contacto (Firestore) y registra
- * la cotización. El PDF no se almacena: se genera al descargarlo.
+ * Guarda solo los datos de la cotización (unos pocos KB). La imagen y el PDF
+ * no se almacenan: se generan en la app cada vez que se envían o descargan.
  */
-export async function generateQuote(opts: {
-  node: HTMLElement
-  number: string
-  contactId: string
-  clientName: string
-  issueDate: string
-  validUntil: string
-  items: QuoteItem[]
-  conditions: QuoteConditions
-}): Promise<{ quote: Quote; image: ImageItem }> {
-  const { toBlob } = await import('html-to-image')
-  await document.fonts.ready
-  const blob = await toBlob(opts.node, { pixelRatio: 2, cacheBust: true, backgroundColor: '#ffffff' })
-  if (!blob) throw new Error('No se pudo generar la imagen')
-
-  // Lado mayor alto para que el texto de la hoja siga nítido al hacer zoom.
-  const image = await uploadImage(blob, opts.contactId, `Cotización ${opts.number}`, { maxSide: 4000, quality: 0.9 })
-
-  const quoteRef = doc(collection(db, 'quotes'))
-  const data = {
-    number: opts.number,
-    contactId: opts.contactId,
-    clientName: opts.clientName,
-    issueDate: opts.issueDate,
-    validUntil: opts.validUntil,
-    items: opts.items,
-    conditions: opts.conditions,
-    total: totals(opts.items).total,
-    imageId: image.id,
-    fileId: image.fileId,
-    shortUrl: image.shortUrl,
-    status: 'pendiente' as QuoteStatus,
-  }
-  await setDoc(quoteRef, { ...data, createdAt: serverTimestamp() })
-  return { quote: { id: quoteRef.id, ...data }, image }
+export async function saveQuote(input: QuoteInput): Promise<Quote> {
+  const ref = doc(collection(db, 'quotes'))
+  const data = { ...input, total: totals(input.items).total, status: 'pendiente' as QuoteStatus }
+  await setDoc(ref, { ...data, createdAt: serverTimestamp() })
+  return { id: ref.id, ...data }
 }

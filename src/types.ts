@@ -30,23 +30,6 @@ export interface Contact {
   followUpAt?: Timestamp | null
 }
 
-export interface ImageItem {
-  id: string
-  name: string
-  /** Imagen completa en files/{fileId} (Firestore). */
-  fileId: string
-  /** Miniatura JPEG pequeña (data URL) para listas y grillas. */
-  thumb: string
-  size: number
-  contentType: string
-  /** null = imagen de la biblioteca; si no, imagen subida para ese contacto. */
-  contactId: string | null
-  /** Enlace público (crm-falcons.web.app/v/xxxx) que se manda por WhatsApp. */
-  shortUrl: string
-  shortCode: string
-  createdAt?: Timestamp
-}
-
 export interface Template {
   id: string
   name: string
@@ -54,15 +37,16 @@ export interface Template {
   createdAt?: Timestamp
 }
 
-export type SendChannel = 'share' | 'link'
+/** share = compartido desde el celular con archivos; chat = se abrió WhatsApp (en PC con descarga). */
+export type SendChannel = 'share' | 'chat'
 
 export interface SendRecord {
   id: string
   channel: SendChannel
   message: string
-  imageId: string | null
-  imageName: string | null
-  imageShortUrl: string | null
+  /** Cotización adjunta, si la hubo (los archivos no se guardan: se regeneran). */
+  quoteId: string | null
+  quoteNumber: string | null
   templateName: string | null
   sentAt?: Timestamp
 }

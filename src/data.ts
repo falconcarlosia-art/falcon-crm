@@ -16,8 +16,7 @@ import {
   type Query,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { deleteFile, prepareImage, saveFile } from './files'
-import type { Contact, ImageItem, SendChannel, SendRecord, Template } from './types'
+import type { Contact, SendChannel, SendRecord, Template } from './types'
 
 // Un solo usuario y pocos cientos de registros: se escucha la colección entera
 // y se filtra en el cliente, sin índices compuestos que mantener.
@@ -48,9 +47,6 @@ function useLive<T>(build: () => Query | null, deps: unknown[]) {
 
 export const useContacts = () =>
   useLive<Contact>(() => query(collection(db, 'contacts'), orderBy('updatedAt', 'desc')), [])
-
-export const useImages = () =>
-  useLive<ImageItem>(() => query(collection(db, 'images'), orderBy('createdAt', 'desc')), [])
 
 export const useTemplates = () =>
   useLive<Template>(() => query(collection(db, 'templates'), orderBy('createdAt', 'asc')), [])
@@ -114,14 +110,13 @@ export async function createContacts(inputs: ContactInput[]) {
   }
 }
 
-export async function deleteContact(id: string, images: ImageItem[]) {
+export async function deleteContact(id: string) {
   // Las subcolecciones no se borran solas en Firestore.
   const sends = await getDocs(collection(db, 'contacts', id, 'sends'))
   const batch = writeBatch(db)
   sends.forEach((s) => batch.delete(s.ref))
   batch.delete(doc(db, 'contacts', id))
   await batch.commit()
-  await Promise.all(images.filter((i) => i.contactId === id).map(deleteImage))
 }
 
 export function recordSend(
@@ -129,7 +124,7 @@ export function recordSend(
   send: {
     channel: SendChannel
     message: string
-    image: ImageItem | null
+    quote: { id: string; number: string } | null
     templateName: string | null
     stage?: Contact['stage']
     /** Días hasta el próximo seguimiento; null lo quita, undefined no lo toca. */
@@ -142,9 +137,8 @@ export function recordSend(
     addDoc(collection(db, 'contacts', contactId, 'sends'), {
       channel: send.channel,
       message: send.message,
-      imageId: send.image?.id ?? null,
-      imageName: send.image?.name ?? null,
-      imageShortUrl: send.image?.shortUrl ?? null,
+      quoteId: send.quote?.id ?? null,
+      quoteNumber: send.quote?.number ?? null,
       templateName: send.templateName,
       sentAt: serverTimestamp(),
     }),
@@ -159,78 +153,6 @@ export function recordSend(
   ])
 }
 
-// ---- Imágenes ----
-
-/**
- * Comprime la imagen, la guarda en Firestore (files/) y crea su enlace público.
- * Devuelve la ficha lista para usar aunque el snapshot aún no haya llegado.
- */
-export async function uploadImage(
-  src: Blob,
-  contactId: string | null,
-  name?: string,
-  opts: { maxSide?: number; quality?: number } = {},
-): Promise<ImageItem> {
-  const { blob, thumb } = await prepareImage(src, opts.maxSide, opts.quality)
-  const { fileId, size, contentType } = await saveFile(blob)
-  const imgName = name ?? ((src as File).name ?? 'imagen').replace(/\.[^.]+$/, '')
-  const shortCode = await createShortLink(fileId, imgName)
-  const data = {
-    name: imgName,
-    fileId,
-    thumb,
-    shortCode,
-    shortUrl: shortLinkUrl(shortCode),
-    size,
-    contentType,
-    contactId,
-    createdAt: serverTimestamp(),
-  }
-  const res = await addDoc(collection(db, 'images'), data)
-  return { id: res.id, ...data, createdAt: undefined }
-}
-
-export function renameImage(id: string, name: string) {
-  return updateDoc(doc(db, 'images', id), { name })
-}
-
-export function moveImageToLibrary(id: string) {
-  return updateDoc(doc(db, 'images', id), { contactId: null })
-}
-
-export async function deleteImage(img: ImageItem) {
-  await deleteDoc(doc(db, 'images', img.id))
-  if (img.shortCode) await deleteDoc(doc(db, 'links', img.shortCode))
-  if (img.fileId) await deleteFile(img.fileId)
-}
-
-// ---- Enlaces cortos ----
-
-// Sin 0/O/1/l/I para que se pueda dictar o copiar a mano sin confusiones.
-const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
-
-/**
- * links/{código} se lee sin sesión: la página /v/{código} lo resuelve y muestra
- * la imagen. El código es aleatorio (no el número de cotización) para que nadie
- * pueda recorrer las cotizaciones de otros.
- */
-export async function createShortLink(fileId: string, name: string): Promise<string> {
-  const bytes = crypto.getRandomValues(new Uint8Array(8))
-  const code = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('')
-  await setDoc(doc(db, 'links', code), { fileId, name, createdAt: serverTimestamp() })
-  return code
-}
-
-export const shortLinkUrl = (code: string) => `${window.location.origin}/v/${code}`
-
-export async function resolveShortLink(code: string): Promise<{ fileId: string; name: string } | null> {
-  const snap = await getDoc(doc(db, 'links', code))
-  return snap.exists() ? (snap.data() as { fileId: string; name: string }) : null
-}
-
-/** Lo que se manda por WhatsApp. */
-export const shareUrl = (img: Pick<ImageItem, 'shortUrl'>) => img.shortUrl
-
 // ---- Plantillas ----
 
 export const DEFAULT_TEMPLATES = [
@@ -238,14 +160,14 @@ export const DEFAULT_TEMPLATES = [
     name: 'Cotización',
     body:
       'Hola {nombre}, te saluda Falcon Electronic.\n' +
-      'Te comparto la cotización que conversamos:\n{enlace}\n\n' +
+      'Te comparto la cotización Nº {numero} por un total de {total}.\n\n' +
       'Cualquier consulta, quedo atento.',
   },
   {
     name: 'Sugerencia',
     body:
-      'Hola {nombre}, te dejo una sugerencia referencial para tu proyecto:\n{enlace}\n\n' +
-      '¿Te parece si lo revisamos juntos?',
+      'Hola {nombre}, te dejo una propuesta referencial para tu proyecto (Nº {numero}).\n\n' +
+      '¿Te parece si la revisamos juntos?',
   },
   {
     name: 'Seguimiento',
@@ -257,11 +179,14 @@ export async function seedTemplatesOnce() {
   // Una marca aparte evita que vuelvan a aparecer si el usuario las borra todas.
   const flag = doc(db, 'meta', 'seed')
   if ((await getDoc(flag)).exists()) return
+  // Ids fijos: si dos pestañas (o el doble montaje de desarrollo) siembran a la
+  // vez, escriben los mismos documentos en lugar de duplicar las plantillas.
   const batch = writeBatch(db)
+  const base = Date.now()
   DEFAULT_TEMPLATES.forEach((t, i) =>
-    batch.set(doc(collection(db, 'templates')), {
+    batch.set(doc(db, 'templates', `default-${i + 1}`), {
       ...t,
-      createdAt: new Date(Date.now() + i),
+      createdAt: new Date(base + i),
     }),
   )
   batch.set(flag, { templates: true, at: serverTimestamp() })

@@ -1,34 +1,39 @@
 # Falcon CRM
 
 Mini CRM de un solo usuario para Falcon Electronic: contactos (nombre y
-WhatsApp) y envío por WhatsApp de imágenes referenciales (cotizaciones,
-catálogos, sugerencias). Se publica en https://crm-falcons.web.app.
+WhatsApp), cotizaciones con el diseño de marca y envío por WhatsApp. Se publica
+en https://crm-falcons.web.app.
 
 - **Contactos**: nombre, número (+51 por defecto), etapa, etiquetas y notas.
   Tienen búsqueda, filtro por etapa e historial de envíos.
-- **Enviar por WhatsApp**: eliges una imagen (de la biblioteca, del contacto o
-  una nueva) y una plantilla, y editas el mensaje.
-  - *Abrir WhatsApp*: abre `wa.me/<número>` con el texto listo y el **enlace** a
-    la imagen. Funciona en PC y en celular. wa.me no permite adjuntar archivos.
-  - *Compartir imagen* (solo en el celular): adjunta la **imagen** con el
-    menú Compartir del sistema. Hay que elegir el chat en WhatsApp, y el texto
-    queda copiado por si WhatsApp lo descarta.
-- **Biblioteca**: imágenes reutilizables, guardadas en Firestore (sin Firebase Storage).
-- **Plantillas**: mensajes con `{nombre}`, `{nombre_completo}` y `{enlace}`.
 - **Cotizaciones**: desde la ficha, en *Nueva cotización*, eliges productos del
   catálogo de Supabase o agregas ítems libres, ajustas precio, cantidad,
-  fechas y condiciones, y la app genera la cotización con el diseño de marca.
-  La imagen queda en la ficha del contacto (descargable como imagen o PDF) y se
-  abre directo el envío por WhatsApp.
+  fechas y condiciones, y la app genera la cotización.
+  - **No se guarda ningún archivo.** De cada cotización solo quedan sus datos
+    (unos pocos KB). La **imagen (JPG) y el PDF se generan en la app** cada vez
+    que se envían o descargan, con las fotos de producto que salen de Supabase.
   - Numeración `AAAA-DDMM-n`, correlativo por día (`2026-2509-1`). Se reserva
     con una transacción en `counters/quote-AAAA-DDMM`, así que requiere
     conexión.
   - Precios con IGV. El valor de venta y el IGV (18 %) se desglosan del total.
   - Los datos de la empresa, las cuentas, el QR de Yape y las condiciones por
-    defecto se editan en **Ajustes**.
+    defecto se editan en **Ajustes**. Como los archivos se regeneran, una
+    cotización antigua se dibuja con los ajustes actuales.
   - Cada cotización tiene estado (*Pendiente*, *Aceptada* o *Rechazada*); al
     aceptarla, el contacto pasa a *Ganado*. **Duplicar** la reabre con los
     mismos ítems para otro cliente.
+- **Enviar por WhatsApp**: eliges si adjuntar una cotización del contacto, una
+  plantilla, y editas el mensaje.
+  - *En el celular*: **Compartir PDF e imagen** adjunta los dos archivos con el
+    menú Compartir del sistema; eliges el chat en WhatsApp y el texto va como
+    mensaje (también queda copiado por si WhatsApp lo descarta).
+  - *En la PC*: **Descargar y abrir WhatsApp** baja el PDF y la imagen y abre
+    `wa.me/<número>` con el texto listo; se adjuntan con el clip 📎. wa.me solo
+    acepta texto, por eso no se pueden adjuntar solos.
+  - *Solo texto*: abre el chat sin adjuntos (seguimientos, respuestas).
+- **Plantillas**: mensajes con `{nombre}`, `{nombre_completo}`, `{numero}` y
+  `{total}` de la cotización. Si se envía sin cotización, las líneas con
+  `{numero}` o `{total}` se quitan.
 - **Panel de resumen**: soles cotizados en el mes, monto por cerrar,
   seguimientos del día y tasa de cierre. En escritorio ocupa el panel derecho;
   en el celular va arriba de la lista.
@@ -54,23 +59,19 @@ catálogos, sugerencias). Se publica en https://crm-falcons.web.app.
     JSON se valida al leerlo.
   - La key vive en `private/ai` de Firestore (solo el dueño la lee) y se usa
     desde el navegador. Conviene ponerle un límite de crédito en OpenRouter.
-- **Enlaces cortos**: las imágenes se envían como `crm-falcons.web.app/v/xxxx`.
-  Esa página es pública: muestra la imagen con botones para descargarla como
-  imagen o PDF. El código es aleatorio, así que no se pueden adivinar otras
-  cotizaciones. WhatsApp no muestra miniatura para estos enlaces.
 
 Stack: React, Vite y Firebase (Auth con Google y Firestore con caché offline).
-Funciona en el **plan gratuito Spark**: no usa Firebase Storage (que exige el
-plan Blaze). Las imágenes se guardan comprimidas (JPEG) en Firestore, en
-`files/{id}/chunks/{n}` de hasta ~900 KB cada uno, con una miniatura aparte
-para las listas. El PDF no se almacena: se genera al descargarlo.
+Funciona en el **plan gratuito Spark**: no usa Firebase Storage ni guarda
+archivos. Todo en Firestore es privado del dueño; no hay nada público.
+Las fuentes de marca (Poppins y Orbitron) van incluidas en la app para que la
+cotización siempre se dibuje igual, sin depender de Google Fonts.
 
 ## Puesta en marcha (una sola vez)
 
 1. En la consola de Firebase del proyecto **crm-falcons**:
    - *Authentication* → Sign-in method → habilitar **Google**.
-     En *Settings → Authorized domains* deben figurar `crm-falcons.web.app` (ya viene por defecto) y
-     `localhost`.
+     En *Settings → Authorized domains* deben figurar `crm-falcons.web.app` (ya
+     viene por defecto) y `localhost`.
    - *Firestore Database* → crear la base de datos (modo producción).
    - No hace falta Storage ni el plan Blaze.
 2. La config de Firebase ya está en `.env.production` (es pública). Para
@@ -106,21 +107,13 @@ npm run build && npx firebase-tools deploy --only hosting
 
 | Colección | Contenido |
 | --- | --- |
-| `contacts/{id}` | `name`, `phone` (solo dígitos, con código de país), `stage`, `tags[]`, `notes`, `lastSentAt` |
-| `contacts/{id}/sends/{id}` | historial: `channel` (`link`/`share`), `message`, `imageId`, `imageShortUrl`, `templateName`, `sentAt` |
-| `images/{id}` | `name`, `fileId`, `thumb` (miniatura), `shortUrl`, `contactId` (`null` = biblioteca) |
-| `files/{id}` y `files/{id}/chunks/{n}` | la imagen completa en base64, en trozos. Lectura pública solo por id |
+| `contacts/{id}` | `name`, `phone` (solo dígitos, con código de país), `stage`, `tags[]`, `notes`, `lastSentAt`, `followUpAt` |
+| `contacts/{id}/sends/{id}` | historial: `channel` (`share`/`chat`), `message`, `quoteId`, `quoteNumber`, `templateName`, `sentAt` |
+| `quotes/{id}` | `number`, `contactId`, `clientName`, `issueDate`, `validUntil`, `items[]` (con miniatura del producto), `conditions`, `total`, `status` |
 | `templates/{id}` | `name`, `body` |
-| `quotes/{id}` | `number`, `contactId`, `clientName`, `issueDate`, `validUntil`, `items[]`, `conditions`, `total`, `status`, `imageId`, `fileId`, `shortUrl` |
 | `counters/quote-AAAA-DDMM` | `last`: último correlativo del día |
-| `private/ai` | `apiKey` de OpenRouter, `quoteModel`, `chatModel` |
-| `links/{código}` | `fileId`, `name` del enlace corto. Lectura pública solo por código |
 | `settings/company` | datos de empresa, pagos, QR Yape (data URL), condiciones por defecto |
-
-Quien recibe el enlace puede ver la imagen sin iniciar sesión, pero nadie puede
-listar ni recorrer las colecciones. Si se borra la imagen, los enlaces ya
-enviados dejan de funcionar.
+| `private/ai` | `apiKey` de OpenRouter, `quoteModel`, `chatModel` |
 
 Cuota gratuita de Firestore (Spark): 1 GiB guardado, 50.000 lecturas y 20.000
-escrituras por día. Una cotización ocupa ~0,5–1 MB, así que alcanza para
-cientos de cotizaciones e imágenes antes de pensar en limpiar o pagar.
+escrituras por día. Como solo se guardan datos, alcanza de sobra.

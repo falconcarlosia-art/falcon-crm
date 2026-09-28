@@ -1,7 +1,7 @@
 rules_version = '2';
 
-// CRM de un solo usuario: todo el contenido es del dueño y nadie más lo lee,
-// salvo links/ y files/, que sirven las imágenes que reciben los clientes.
+// CRM de un solo usuario: todo el contenido es del dueño y nadie más lo lee.
+// No hay nada público: imágenes y PDF de cotizaciones se generan en la app.
 // Si cambia el correo, actualizar también VITE_ALLOWED_EMAIL.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -13,18 +13,6 @@ service cloud.firestore {
 
     match /{document=**} {
       allow read, write: if isOwner();
-    }
-
-    // Lo que abre el cliente desde WhatsApp: lectura puntual por id (get),
-    // nunca listar. Los códigos e ids son aleatorios y no se pueden adivinar.
-    match /links/{code} {
-      allow get: if true;
-    }
-    match /files/{fileId} {
-      allow get: if true;
-      match /chunks/{chunk} {
-        allow get: if true;
-      }
     }
   }
 }
