@@ -127,16 +127,20 @@ export function SendDialog({
     }).catch((err) => toast(errorMessage(err), 'error'))
   }
 
-  /** Celular: la hoja de Compartir manda PDF e imagen juntos al chat que elijas. */
-  async function share() {
+  /**
+   * Alternativa en el celular: la hoja de Compartir con solo los archivos.
+   * Sin texto: si van juntos, WhatsApp suele quedarse con el texto y descartar
+   * los adjuntos. El mensaje queda copiado para pegarlo en el chat.
+   */
+  async function shareFiles() {
     if (!files) return
     const copied = await copyText(message)
     const both = [files.pdf, files.jpg]
     const payload = navigator.canShare?.({ files: both }) ? both : [files.pdf]
     try {
-      await navigator.share({ files: payload, text: message, title: `Cotización ${quote?.number ?? ''}` })
+      await navigator.share({ files: payload })
       log('share', message)
-      toast(copied ? 'Enviado. El mensaje también quedó copiado.' : 'Enviado')
+      toast(copied ? 'Archivos enviados. El mensaje quedó copiado: pégalo en el chat.' : 'Archivos enviados')
       onClose()
     } catch (err) {
       if ((err as Error).name !== 'AbortError') toast(errorMessage(err), 'error')
@@ -144,9 +148,10 @@ export function SendDialog({
   }
 
   /**
-   * Abre el chat con el texto. Con cotización en PC, antes descarga PDF e imagen
-   * para adjuntarlos (wa.me solo acepta texto). Todo va síncrono en el clic para
-   * que el navegador no bloquee la ventana.
+   * Abre el chat con el texto. Con cotización, antes descarga PDF e imagen para
+   * adjuntarlos con el clip (wa.me solo acepta texto). Es el camino principal
+   * también en el celular: es el único en que los archivos llegan siempre. Todo
+   * va síncrono en el clic para que el navegador no bloquee la ventana.
    */
   function openChat(withDownloads: boolean) {
     if (withDownloads && files) {
@@ -155,11 +160,14 @@ export function SendDialog({
     }
     window.open(waLink(contact.phone, message), '_blank', 'noopener')
     log('chat', message)
-    if (withDownloads && files) toast('PDF e imagen descargados: adjúntalos en el chat (clip 📎).')
+    if (withDownloads && files)
+      toast(
+        shareSupported
+          ? 'PDF e imagen descargados: en el chat toca el clip 📎 → Documento (PDF) o Galería (imagen).'
+          : 'PDF e imagen descargados: adjúntalos en el chat (clip 📎).',
+      )
     onClose()
   }
-
-  const pcWithQuote = Boolean(quote) && !shareSupported
 
   return (
     <Modal
@@ -169,24 +177,20 @@ export function SendDialog({
       footer={
         <div className="send-actions">
           {quote && shareSupported && (
-            <button className="btn btn-wa" onClick={share} disabled={!files}>
+            <button className="btn btn-ghost" onClick={shareFiles} disabled={!files}>
               <IconShare />
-              {files ? 'Compartir PDF e imagen' : 'Preparando…'}
+              Compartir archivos
             </button>
           )}
-          {pcWithQuote ? (
+          {quote ? (
             <button className="btn btn-wa" onClick={() => openChat(true)} disabled={!files || !message.trim()}>
               <IconWhatsApp />
               {files ? 'Descargar y abrir WhatsApp' : 'Preparando…'}
             </button>
           ) : (
-            <button
-              className={quote ? 'btn btn-ghost' : 'btn btn-wa'}
-              onClick={() => openChat(false)}
-              disabled={!message.trim()}
-            >
+            <button className="btn btn-wa" onClick={() => openChat(false)} disabled={!message.trim()}>
               <IconWhatsApp />
-              {quote ? 'Solo texto' : 'Abrir WhatsApp'}
+              Abrir WhatsApp
             </button>
           )}
         </div>
@@ -255,9 +259,7 @@ export function SendDialog({
             Para {formatPhone(contact.phone)}.{' '}
             {!quote
               ? 'Se abrirá el chat con el texto listo.'
-              : shareSupported
-                ? '"Compartir" adjunta el PDF y la imagen: eliges el chat de WhatsApp y el texto va como mensaje.'
-                : 'Se descargan el PDF y la imagen y se abre el chat con el texto: adjúntalos con el clip 📎.'}
+              : 'Se descargan el PDF y la imagen y se abre el chat con el texto: adjúntalos con el clip 📎.'}
           </p>
           <label className="field-inline">
             <span>Recordar seguimiento</span>

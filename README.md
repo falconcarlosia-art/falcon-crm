@@ -24,13 +24,14 @@ en https://crm-falcons.web.app.
     mismos ítems para otro cliente.
 - **Enviar por WhatsApp**: eliges si adjuntar una cotización del contacto, una
   plantilla, y editas el mensaje.
-  - *En el celular*: **Compartir PDF e imagen** adjunta los dos archivos con el
-    menú Compartir del sistema; eliges el chat en WhatsApp y el texto va como
-    mensaje (también queda copiado por si WhatsApp lo descarta).
-  - *En la PC*: **Descargar y abrir WhatsApp** baja el PDF y la imagen y abre
-    `wa.me/<número>` con el texto listo; se adjuntan con el clip 📎. wa.me solo
-    acepta texto, por eso no se pueden adjuntar solos.
-  - *Solo texto*: abre el chat sin adjuntos (seguimientos, respuestas).
+  - **Descargar y abrir WhatsApp** (celular y PC): baja el PDF y la imagen y
+    abre `wa.me/<número>` con el texto listo; se adjuntan con el clip 📎
+    (Documento para el PDF, Galería para la imagen). wa.me solo acepta texto,
+    por eso no se pueden adjuntar solos.
+  - *Compartir archivos* (celular): la hoja de Compartir con solo el PDF y la
+    imagen; el mensaje queda copiado para pegarlo. Van sin texto porque, si
+    van juntos, WhatsApp suele quedarse con el texto y descartar los archivos.
+  - *Sin adjunto*: abre el chat solo con el texto (seguimientos, respuestas).
 - **Plantillas**: mensajes con `{nombre}`, `{nombre_completo}`, `{numero}` y
   `{total}` de la cotización. Si se envía sin cotización, las líneas con
   `{numero}` o `{total}` se quitan.

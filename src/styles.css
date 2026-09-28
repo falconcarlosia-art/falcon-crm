@@ -262,7 +262,8 @@ img { display: block; max-width: 100%; }
 
 .send-grid { display: grid; gap: 18px; }
 .send-grid .thumb-grid { max-height: 300px; overflow-y: auto; padding: 3px; }
-.send-actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; width: 100%; }
+/* Celular: botones apilados, el principal (último en el HTML) arriba y a lo ancho. */
+.send-actions { display: flex; flex-direction: column-reverse; gap: 8px; width: 100%; }
 .send-actions .btn { padding: 12px 14px; }
 
 /* ---- Biblioteca / plantillas ---- */
@@ -291,7 +292,7 @@ img { display: block; max-width: 100%; }
 
 /* ---- Avisos ---- */
 .toasts {
-  position: fixed; left: 50%; transform: translateX(-50%); z-index: 100;
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none;
   bottom: calc(80px + env(safe-area-inset-bottom)); display: grid; gap: 8px; width: min(92vw, 420px);
 }
 .toast { background: var(--navy); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); }
@@ -316,7 +317,7 @@ img { display: block; max-width: 100%; }
   .modal { max-width: 480px; border-radius: 20px; }
   .modal-wide { max-width: 860px; }
   .send-grid { grid-template-columns: 1.1fr 1fr; }
-  .send-actions { width: auto; grid-auto-columns: auto; }
+  .send-actions { width: auto; flex-direction: row; }
   .toasts { bottom: 24px; }
 }
 
