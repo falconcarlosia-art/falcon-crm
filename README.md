@@ -60,6 +60,14 @@ en https://crm-falcons.web.app.
   - La key vive en `private/ai` de Firestore (solo el dueño la lee) y se usa
     desde el navegador. Conviene ponerle un límite de crédito en OpenRouter.
 
+- **App instalable (PWA)**: el botón **Instalar** de la barra la agrega a la
+  pantalla de inicio. En Android abre el instalador; en iPhone muestra los pasos
+  (Safari → Compartir → *Agregar a inicio*). Se abre a pantalla completa con su
+  ícono y arranca aun sin señal: el service worker (`public/sw.js`) guarda solo
+  la app, pide la página primero a la red (nunca muestra una versión vieja si
+  hay conexión) y deja los datos a la caché offline de Firestore. En iPhone la
+  app instalada no comparte sesión con Safari: se ingresa con Google una vez.
+
 Stack: React, Vite y Firebase (Auth con Google y Firestore con caché offline).
 Funciona en el **plan gratuito Spark**: no usa Firebase Storage ni guarda
 archivos. Todo en Firestore es privado del dueño; no hay nada público.

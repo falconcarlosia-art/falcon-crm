@@ -79,3 +79,10 @@ export const IconSparkle = (p: P) => (
 export const IconCheck = (p: P) => (
   <svg {...base(p)}><path d="M20 6 9 17l-5-5" /></svg>
 )
+export const IconInstall = (p: P) => (
+  <svg {...base(p)}><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+)
+/** Botón Compartir de Safari (cuadro con flecha hacia arriba). */
+export const IconShareIOS = (p: P) => (
+  <svg {...base(p)}><path d="M12 3v12M8 7l4-4 4 4M8 11H6v10h12V11h-2" /></svg>
+)

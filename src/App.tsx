@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, type User } from 'firebase/auth'
 import { ALLOWED_EMAIL, auth, configured, googleProvider } from './firebase'
 import { seedTemplatesOnce, useContacts, useTemplates } from './data'
@@ -7,7 +8,9 @@ import { TemplatesView } from './components/TemplatesView'
 import { SettingsView } from './components/SettingsView'
 import { useAllQuotes, useSettings } from './quotes'
 import { useAiConfig } from './ai'
-import { IconLogout, IconMessage, IconSettings, IconUsers } from './components/icons'
+import { IconInstall, IconLogout, IconMessage, IconSettings, IconShareIOS, IconUsers } from './components/icons'
+import { Modal } from './components/Modal'
+import { useInstall } from './pwa'
 import { errorMessage, useToast } from './components/toast'
 
 function Brand() {
@@ -136,6 +139,7 @@ function Shell({ user }: { user: User }) {
           ))}
         </nav>
         <div className="user">
+          <InstallButton />
           {user.photoURL && <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />}
           <button className="icon-btn" onClick={() => signOut(auth)} aria-label="Cerrar sesión" title="Cerrar sesión">
             <IconLogout />
@@ -167,5 +171,56 @@ function Shell({ user }: { user: User }) {
         ))}
       </nav>
     </div>
+  )
+}
+
+/** Aparece solo si la app aún no está instalada y el navegador lo permite. */
+function InstallButton() {
+  const toast = useToast()
+  const install = useInstall()
+  const [iosHelp, setIosHelp] = useState(false)
+  if (!install.canPrompt && !install.iosManual) return null
+
+  async function onClick() {
+    if (install.canPrompt) {
+      if (await install.prompt()) toast('Listo: Falcon CRM quedó en tu pantalla de inicio.')
+    } else {
+      setIosHelp(true)
+    }
+  }
+
+  return (
+    <>
+      <button className="install-btn" onClick={onClick} title="Instalar la app en este equipo">
+        <IconInstall width={16} height={16} />
+        <span>Instalar</span>
+      </button>
+      {/* Portal: la barra superior es sticky con z-index y dejaría el modal debajo de la barra inferior. */}
+      {iosHelp &&
+        createPortal(
+          <Modal
+            title="Instalar en el iPhone"
+            onClose={() => setIosHelp(false)}
+            footer={
+              <button className="btn btn-primary" onClick={() => setIosHelp(false)}>
+                Entendido
+              </button>
+            }
+          >
+            <ol className="ios-steps">
+              <li>
+                Toca <b>Compartir</b> <IconShareIOS width={16} height={16} /> en la barra de Safari.
+              </li>
+              <li>
+                Elige <b>Agregar a inicio</b> (baja en la lista si no lo ves).
+              </li>
+              <li>
+                Toca <b>Agregar</b>. Abre Falcon CRM desde su ícono e ingresa con Google una vez.
+              </li>
+            </ol>
+          </Modal>,
+          document.body,
+        )}
+    </>
   )
 }
