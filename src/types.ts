@@ -39,7 +39,7 @@ export interface ImageItem {
   contentType: string
   /** null = imagen de la biblioteca; si no, imagen subida para ese contacto. */
   contactId: string | null
-  /** Enlace corto (falcon-crm.web.app/v/xxxx) que se manda por WhatsApp. */
+  /** Enlace corto (crm-falcons.web.app/v/xxxx) que se manda por WhatsApp. */
   shortUrl?: string
   shortCode?: string
   createdAt?: Timestamp

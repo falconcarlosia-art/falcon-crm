@@ -6,7 +6,7 @@ import { deleteTemplate, saveTemplate } from '../data'
 import { fillTemplate } from '../whatsapp'
 import type { Template } from '../types'
 
-const SAMPLE = { name: 'Pedro Ramírez', link: 'https://falcon-crm.web.app/…/cotizacion.png' }
+const SAMPLE = { name: 'Pedro Ramírez', link: 'https://crm-falcons.web.app/v/k7m3q9xa' }
 
 export function TemplatesView({ templates }: { templates: Template[] }) {
   const toast = useToast()

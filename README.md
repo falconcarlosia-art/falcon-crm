@@ -2,7 +2,7 @@
 
 Mini CRM de un solo usuario para Falcon Electronic: contactos (nombre y
 WhatsApp) y envío por WhatsApp de imágenes referenciales (cotizaciones,
-catálogos, sugerencias). Se publica en https://falcon-crm.web.app.
+catálogos, sugerencias). Se publica en https://crm-falcons.web.app.
 
 - **Contactos**: nombre, número (+51 por defecto), etapa, etiquetas y notas.
   Tienen búsqueda, filtro por etapa e historial de envíos.
@@ -54,7 +54,7 @@ catálogos, sugerencias). Se publica en https://falcon-crm.web.app.
     JSON se valida al leerlo.
   - La key vive en `private/ai` de Firestore (solo el dueño la lee) y se usa
     desde el navegador. Conviene ponerle un límite de crédito en OpenRouter.
-- **Enlaces cortos**: las imágenes se envían como `falcon-crm.web.app/v/xxxx`
+- **Enlaces cortos**: las imágenes se envían como `crm-falcons.web.app/v/xxxx`
   en lugar de la URL larga de Storage. Esa página es pública y redirige a la
   imagen. El código es aleatorio, así que no se pueden adivinar otras
   cotizaciones. WhatsApp no muestra miniatura para estos enlaces, porque la
@@ -67,7 +67,7 @@ Storage).
 
 1. En la consola de Firebase del proyecto **crm-falcons**:
    - *Authentication* → Sign-in method → habilitar **Google**.
-     En *Settings → Authorized domains* deben figurar `falcon-crm.web.app` y
+     En *Settings → Authorized domains* deben figurar `crm-falcons.web.app` (ya viene por defecto) y
      `localhost`.
    - *Firestore Database* → crear la base de datos (modo producción).
    - *Storage* → crear el bucket.
