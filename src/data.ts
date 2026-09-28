@@ -65,6 +65,15 @@ export const useSends = (contactId: string) =>
 
 export type ContactInput = Pick<Contact, 'name' | 'phone' | 'stage' | 'tags' | 'notes'>
 
+const DAY = 86_400_000
+
+/** Fecha de seguimiento a N días, a las 9:00 para que ordene bien dentro del día. */
+export function followUpDate(days: number): Date {
+  const d = new Date(Date.now() + days * DAY)
+  d.setHours(9, 0, 0, 0)
+  return d
+}
+
 /**
  * El id se genera en el cliente para poder abrir la ficha al instante: con la
  * caché offline, la promesa solo se resuelve cuando el servidor confirma.
@@ -82,6 +91,27 @@ export function createContact(input: ContactInput): { id: string; saved: Promise
 
 export function updateContact(id: string, patch: Partial<ContactInput>) {
   return updateDoc(doc(db, 'contacts', id), { ...patch, updatedAt: serverTimestamp() })
+}
+
+export function setFollowUp(id: string, date: Date | null) {
+  return updateDoc(doc(db, 'contacts', id), { followUpAt: date, updatedAt: serverTimestamp() })
+}
+
+/** Alta masiva (importación). Firestore limita cada lote a 500 escrituras. */
+export async function createContacts(inputs: ContactInput[]) {
+  for (let i = 0; i < inputs.length; i += 450) {
+    const batch = writeBatch(db)
+    inputs.slice(i, i + 450).forEach((input) =>
+      batch.set(doc(collection(db, 'contacts')), {
+        ...input,
+        lastSentAt: null,
+        followUpAt: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+    )
+    await batch.commit()
+  }
 }
 
 export async function deleteContact(id: string, images: ImageItem[]) {
@@ -102,6 +132,8 @@ export function recordSend(
     image: ImageItem | null
     templateName: string | null
     stage?: Contact['stage']
+    /** Días hasta el próximo seguimiento; null lo quita, undefined no lo toca. */
+    followUpDays?: number | null
   },
 ) {
   // En paralelo y sin esperar al servidor: se envía desde el celular, a veces
@@ -113,6 +145,7 @@ export function recordSend(
       imageId: send.image?.id ?? null,
       imageName: send.image?.name ?? null,
       imageUrl: send.image?.url ?? null,
+      imageShortUrl: send.image?.shortUrl ?? null,
       templateName: send.templateName,
       sentAt: serverTimestamp(),
     }),
@@ -120,6 +153,9 @@ export function recordSend(
       lastSentAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       ...(send.stage ? { stage: send.stage } : {}),
+      ...(send.followUpDays !== undefined
+        ? { followUpAt: send.followUpDays === null ? null : followUpDate(send.followUpDays) }
+        : {}),
     }),
   ])
 }
@@ -132,9 +168,12 @@ export async function uploadImage(file: File, contactId: string | null, name?: s
   const objRef = ref(storage, path)
   await uploadBytes(objRef, file, { contentType: file.type, cacheControl: 'public, max-age=31536000' })
   const url = await getDownloadURL(objRef)
+  const shortCode = await createShortLink(url)
   const data = {
     name: name ?? file.name.replace(/\.[^.]+$/, ''),
     url,
+    shortCode,
+    shortUrl: shortLinkUrl(shortCode),
     path,
     size: file.size,
     contentType: file.type,
@@ -161,7 +200,35 @@ export async function deleteImage(img: ImageItem) {
     if ((err as { code?: string }).code !== 'storage/object-not-found') throw err
   }
   await deleteDoc(doc(db, 'images', img.id))
+  if (img.shortCode) await deleteDoc(doc(db, 'links', img.shortCode))
 }
+
+// ---- Enlaces cortos ----
+
+// Sin 0/O/1/l/I para que se pueda dictar o copiar a mano sin confusiones.
+const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
+
+/**
+ * links/{código} es la única colección de lectura pública: la página /v/{código}
+ * la consulta sin sesión y redirige a la imagen. El código es aleatorio (no el
+ * número de cotización) para que nadie pueda recorrer las cotizaciones de otros.
+ */
+export async function createShortLink(url: string): Promise<string> {
+  const bytes = crypto.getRandomValues(new Uint8Array(8))
+  const code = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('')
+  await setDoc(doc(db, 'links', code), { url, createdAt: serverTimestamp() })
+  return code
+}
+
+export const shortLinkUrl = (code: string) => `${window.location.origin}/v/${code}`
+
+export async function resolveShortLink(code: string): Promise<string | null> {
+  const snap = await getDoc(doc(db, 'links', code))
+  return snap.exists() ? (snap.data().url as string) : null
+}
+
+/** URL para mandar por WhatsApp: la corta si existe (imágenes nuevas), si no la de Storage. */
+export const shareUrl = (img: Pick<ImageItem, 'url' | 'shortUrl'>) => img.shortUrl || img.url
 
 // ---- Plantillas ----
 

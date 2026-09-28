@@ -388,3 +388,134 @@ img { display: block; max-width: 100%; }
 @media (min-width: 900px) {
   .qe-body { grid-template-columns: minmax(380px, 460px) 1fr; }
 }
+
+/* ---- Controles comunes nuevos ---- */
+.btn-sm { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+.icon-btn-bordered { border: 1px solid var(--line); background: #fff; width: 42px; height: 42px; flex: none; }
+.link-btn {
+  border: none; background: none; padding: 0; color: var(--orange); font-weight: 600; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.chip-xs { padding: 2px 9px; font-size: 11px; }
+.status-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.avatar-sm { width: 30px; height: 30px; font-size: 11px; }
+.due-overdue { color: var(--danger); font-weight: 600; }
+select {
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; font: inherit; width: 100%;
+}
+.field-inline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 14px; font-weight: 500; }
+.field-inline select { width: auto; padding: 6px 10px; }
+.show-mobile-block { display: none; }
+
+/* 1. Filtros de etapa: en escritorio van en varias filas, sin cortarse. */
+@media (min-width: 900px) {
+  .list-pane .chip-scroll { flex-wrap: wrap; overflow: visible; }
+}
+
+/* 3. Envío: imagen elegida en grande + tira deslizable de opciones. */
+.send-preview {
+  position: relative; border-radius: 12px; overflow: hidden; background: #e7ebf1; border: 1px solid var(--line);
+  height: 220px; display: grid; place-items: center; margin-bottom: 10px;
+}
+.send-preview a, .send-preview img { width: 100%; height: 100%; }
+.send-preview img { object-fit: contain; object-position: top; background: #fff; }
+.send-preview-empty { color: var(--muted); font-size: 14px; padding: 16px; text-align: center; }
+.send-preview-name {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 6px; color: #fff; font-size: 12px; font-weight: 500;
+  background: linear-gradient(transparent, rgba(15, 23, 36, 0.85)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.thumb-strip { display: flex; gap: 8px; overflow-x: auto; padding: 3px 3px 6px; scrollbar-width: thin; }
+.thumb-strip .thumb { flex: none; width: 64px; height: 84px; aspect-ratio: auto; font-size: 11px; }
+.thumb-strip .thumb-check { width: 18px; height: 18px; top: 4px; right: 4px; }
+.thumb-star { position: absolute; left: 4px; top: 2px; color: var(--yellow); font-size: 13px; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+@media (min-width: 900px) {
+  .send-preview { height: 280px; }
+  .thumb-strip { flex-wrap: wrap; max-height: 190px; overflow-y: auto; }
+}
+
+/* 4. Nombre del ítem: crece con el texto en vez de cortarse. */
+.qe .qe-item-name { resize: none; line-height: 1.35; font-family: inherit; field-sizing: content; }
+
+/* Contenido que no debe ensanchar su columna (grid items tienen min-width: auto). */
+.detail, .detail > *, .qe-form > *, .qe-row > *, .board-col, .board-card { min-width: 0; }
+.qe-body { grid-template-columns: minmax(0, 1fr); }
+.qe-row input { min-width: 0; }
+
+/* Botón Nuevo compacto dentro de la columna de la lista (escritorio). */
+.list-pane .toolbar .btn-new { padding: 0; width: 42px; flex: none; }
+.list-pane .toolbar .btn-new .btn-label { display: none; }
+.search { min-width: 0; }
+
+/* 5-7. Panel de resumen y seguimientos. */
+.dash { display: grid; gap: 14px; }
+.dash-compact { margin-bottom: 12px; gap: 10px; }
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.kpi { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; display: grid; gap: 2px; min-width: 0; }
+.kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.kpi-value { font-size: 24px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-sub { font-size: 12px; color: var(--muted); }
+.dash-compact .kpi { padding: 10px 12px; }
+.dash-compact .kpi-value { font-size: 18px; }
+@media (min-width: 1200px) {
+  .dash:not(.dash-compact) .kpis { grid-template-columns: repeat(4, 1fr); }
+}
+.due-empty { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); }
+.due-empty svg { color: var(--wa-dark); flex: none; }
+.due-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.due-list li { display: flex; align-items: center; gap: 6px; }
+.due-list .wa-quick { width: 36px; height: 36px; margin: 0; }
+.due-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: none; padding: 6px 0; text-align: left; }
+.due-text { display: grid; min-width: 0; font-size: 14px; }
+.due-text b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.due-text span { font-size: 12px; }
+.followup-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.followup-row input[type='date'] { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font: inherit; font-size: 13px; }
+
+/* 9. Tablero. */
+.view-toggle { display: flex; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 2px; }
+.view-toggle button { border: none; background: none; width: 36px; border-radius: 9px; color: var(--muted); display: grid; place-items: center; }
+.view-toggle button.on { background: var(--navy); color: #fff; }
+.contacts-board .toolbar { max-width: 720px; }
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(190px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 12px; align-items: start; }
+.board-col { background: #e9edf3; border-radius: var(--radius); padding: 10px; min-height: 240px; border: 2px solid transparent; transition: border-color 0.15s, background 0.15s; }
+.board-over { border-color: var(--c); background: #fff8ee; }
+.board-head { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 10px; }
+.board-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.board-card {
+  position: relative; background: #fff; border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow);
+  display: grid; gap: 4px; cursor: grab; border-left: 3px solid var(--c);
+}
+.board-card:active { cursor: grabbing; }
+.board-card.dragging { opacity: 0.4; }
+.board-card-top { display: flex; align-items: center; gap: 8px; padding-right: 30px; }
+.board-card { grid-template-columns: minmax(0, 1fr); }
+.board-card > * { min-width: 0; }
+.board-card-top .avatar { flex: none; }
+.board-card-top b {
+  flex: 1; min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.3; overflow-wrap: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.board-meta { color: var(--muted); }
+.board-wa {
+  position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: var(--wa); color: #fff; display: grid; place-items: center;
+}
+.board-empty { color: var(--muted); font-size: 12px; text-align: center; padding: 20px 0; border: 2px dashed #d3d9e2; border-radius: 10px; margin: 0; }
+
+/* 10. Importación. */
+.import-grid { display: grid; gap: 18px; }
+.import-grid .form input, .import-grid .form textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.dropzone-sm { padding: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; font: inherit; width: 100%; color: var(--orange); font-weight: 600; }
+.import-table { max-height: 360px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.import-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.import-table td { padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.imp-status { text-align: right; font-weight: 600; white-space: nowrap; }
+.imp-ok .imp-status { color: var(--wa-dark); }
+.imp-dup .imp-status, .imp-invalid .imp-status { color: var(--muted); }
+.imp-dup td:not(.imp-status), .imp-invalid td:not(.imp-status) { opacity: 0.55; }
+@media (min-width: 900px) {
+  .import-grid { grid-template-columns: 1fr 1.1fr; }
+}
+@media (max-width: 899px) {
+  .show-mobile-block { display: block; }
+}

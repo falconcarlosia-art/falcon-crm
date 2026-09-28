@@ -7,6 +7,7 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   type Timestamp,
 } from 'firebase/firestore'
@@ -36,6 +37,14 @@ export interface QuoteConditions {
   commercial: string
 }
 
+export type QuoteStatus = 'pendiente' | 'aceptada' | 'rechazada'
+
+export const QUOTE_STATUS: Record<QuoteStatus, { label: string; color: string }> = {
+  pendiente: { label: 'Pendiente', color: '#f7941d' },
+  aceptada: { label: 'Aceptada', color: '#16a34a' },
+  rechazada: { label: 'Rechazada', color: '#dc2626' },
+}
+
 export interface Quote {
   id: string
   number: string
@@ -48,7 +57,10 @@ export interface Quote {
   total: number
   imageId: string
   imageUrl: string
+  imageShortUrl?: string
   pdfUrl: string
+  /** Ausente en cotizaciones antiguas: se trata como 'pendiente'. */
+  status?: QuoteStatus
   createdAt?: Timestamp
 }
 
@@ -172,6 +184,19 @@ export function saveSettings(s: CompanySettings) {
   return setDoc(doc(db, 'settings', 'company'), { ...s, updatedAt: serverTimestamp() })
 }
 
+export function useAllQuotes() {
+  const [quotes, setQuotes] = useState<Quote[]>([])
+  useEffect(
+    () => onSnapshot(collection(db, 'quotes'), (snap) => setQuotes(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Quote))),
+    [],
+  )
+  return quotes
+}
+
+export function setQuoteStatus(id: string, status: QuoteStatus) {
+  return updateDoc(doc(db, 'quotes', id), { status })
+}
+
 export function useQuotes(contactId: string) {
   const [quotes, setQuotes] = useState<Quote[]>([])
   useEffect(
@@ -268,7 +293,9 @@ export async function generateQuote(opts: {
     total: totals(opts.items).total,
     imageId: image.id,
     imageUrl: image.url,
+    imageShortUrl: image.shortUrl ?? '',
     pdfUrl,
+    status: 'pendiente' as QuoteStatus,
   }
   await setDoc(quoteRef, { ...data, createdAt: serverTimestamp() })
   return { quote: { id: quoteRef.id, ...data }, image }

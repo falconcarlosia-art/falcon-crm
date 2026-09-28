@@ -26,6 +26,8 @@ export interface Contact {
   createdAt?: Timestamp
   updatedAt?: Timestamp
   lastSentAt?: Timestamp | null
+  /** Próximo seguimiento: el contacto aparece en "Hoy toca contactar" desde ese día. */
+  followUpAt?: Timestamp | null
 }
 
 export interface ImageItem {
@@ -37,6 +39,9 @@ export interface ImageItem {
   contentType: string
   /** null = imagen de la biblioteca; si no, imagen subida para ese contacto. */
   contactId: string | null
+  /** Enlace corto (falcon-crm.web.app/v/xxxx) que se manda por WhatsApp. */
+  shortUrl?: string
+  shortCode?: string
   createdAt?: Timestamp
 }
 

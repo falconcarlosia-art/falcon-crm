@@ -28,22 +28,29 @@ const COND_FIELDS: [keyof QuoteConditions, string][] = [
 ]
 
 export function QuoteEditor({
-  contact,
+  contact: initialContact,
+  contacts,
+  initial,
   company,
   onClose,
   onGenerated,
 }: {
   contact: Contact
+  /** Al duplicar se puede elegir otro cliente de esta lista. */
+  contacts?: Contact[]
+  initial?: { items: QuoteItem[]; conditions: QuoteConditions; number: string }
   company: CompanySettings
   onClose: () => void
-  onGenerated: (image: ImageItem) => void
+  onGenerated: (image: ImageItem, contact: Contact) => void
 }) {
   const toast = useToast()
-  const [clientName, setClientName] = useState(contact.name)
+  const [contactId, setContactId] = useState(initialContact.id)
+  const contact = contacts?.find((c) => c.id === contactId) ?? initialContact
+  const [clientName, setClientName] = useState(initialContact.name)
   const [issueDate, setIssueDate] = useState(todayISO())
   const [validUntil, setValidUntil] = useState(addDaysISO(todayISO(), company.validityDays))
-  const [items, setItems] = useState<QuoteItem[]>([])
-  const [conditions, setConditions] = useState<QuoteConditions>(company.conditions)
+  const [items, setItems] = useState<QuoteItem[]>(initial?.items ?? [])
+  const [conditions, setConditions] = useState<QuoteConditions>(initial?.conditions ?? company.conditions)
   const [number, setNumber] = useState('')
   const [busy, setBusy] = useState(false)
   const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit')
@@ -118,7 +125,7 @@ export function QuoteEditor({
         conditions,
       })
       toast(`Cotización ${n} generada`)
-      onGenerated(image)
+      onGenerated(image, contact)
     } catch (err) {
       toast(errorMessage(err), 'error')
       setBusy(false)
@@ -131,7 +138,7 @@ export function QuoteEditor({
         <button className="icon-btn" onClick={onClose} aria-label="Cerrar" disabled={busy}>
           <IconX />
         </button>
-        <h2>Nueva cotización · {contact.name}</h2>
+        <h2>{initial ? `Duplicar Nº ${initial.number}` : `Nueva cotización · ${contact.name}`}</h2>
         <div className="qe-tabs show-mobile">
           <button className={mobileTab === 'edit' ? 'on' : ''} onClick={() => setMobileTab('edit')}>
             Editar
@@ -147,6 +154,26 @@ export function QuoteEditor({
           <section className="card">
             <h3 className="section-title">Cliente y fechas</h3>
             <div className="form">
+              {contacts && (
+                <label className="field">
+                  <span>Contacto</span>
+                  <select
+                    value={contactId}
+                    onChange={(e) => {
+                      setContactId(e.target.value)
+                      setClientName(contacts.find((c) => c.id === e.target.value)?.name ?? '')
+                    }}
+                  >
+                    {[...contacts]
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
               <label className="field">
                 <span>Cliente (como sale en la cotización)</span>
                 <input value={clientName} onChange={(e) => setClientName(e.target.value)} />
@@ -219,11 +246,13 @@ export function QuoteEditor({
                 <li key={idx}>
                   {it.thumb ? <img src={it.thumb} alt="" /> : <span className="qe-noimg" />}
                   <div className="qe-item-main">
-                    <input
+                    {/* textarea que crece con el texto: en el celular los nombres largos no se cortan. */}
+                    <textarea
                       className="qe-item-name"
+                      rows={Math.min(5, Math.max(1, Math.ceil(it.name.length / 18)))}
                       value={it.name}
                       placeholder="Descripción"
-                      onChange={(e) => updateItem(idx, { name: e.target.value })}
+                      onChange={(e) => updateItem(idx, { name: e.target.value.replace(/\n/g, ' ') })}
                     />
                     <div className="qe-item-nums">
                       <label>

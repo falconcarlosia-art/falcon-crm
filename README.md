@@ -26,6 +26,24 @@ catálogos, sugerencias). Se publica en https://falcon-crm.web.app.
   - Precios con IGV. El valor de venta y el IGV (18 %) se desglosan del total.
   - Los datos de la empresa, las cuentas, el QR de Yape y las condiciones por
     defecto se editan en **Ajustes**.
+  - Cada cotización tiene estado (*Pendiente*, *Aceptada* o *Rechazada*); al
+    aceptarla, el contacto pasa a *Ganado*. **Duplicar** la reabre con los
+    mismos ítems para otro cliente.
+- **Panel de resumen**: soles cotizados en el mes, monto por cerrar,
+  seguimientos del día y tasa de cierre. En escritorio ocupa el panel derecho;
+  en el celular va arriba de la lista.
+- **Seguimientos**: al enviar se elige "recordar en 1/3/7 días", y la ficha
+  permite fijar o posponer la fecha. *Hoy toca contactar* lista los pendientes
+  con WhatsApp directo (plantilla Seguimiento), "+3 d" y "hecho".
+- **Tablero** (escritorio): columnas por etapa; se arrastra la tarjeta para
+  cambiar de etapa.
+- **Importar contactos** desde Excel/CSV o pegando una lista: detecta las
+  columnas de nombre y celular, marca duplicados y omite filas incompletas.
+- **Enlaces cortos**: las imágenes se envían como `falcon-crm.web.app/v/xxxx`
+  en lugar de la URL larga de Storage. Esa página es pública y redirige a la
+  imagen. El código es aleatorio, así que no se pueden adivinar otras
+  cotizaciones. WhatsApp no muestra miniatura para estos enlaces, porque la
+  redirección ocurre en el navegador.
 
 Stack: React, Vite y Firebase (Auth con Google, Firestore con caché offline y
 Storage).
@@ -87,6 +105,7 @@ npm run build && npx firebase-tools deploy --only hosting
 | `templates/{id}` | `name`, `body` |
 | `quotes/{id}` | `number`, `contactId`, `clientName`, `issueDate`, `validUntil`, `items[]`, `conditions`, `total`, `imageUrl`, `pdfUrl` |
 | `counters/quote-AAAA-DDMM` | `last`: último correlativo del día |
+| `links/{código}` | `url`: destino del enlace corto. Única colección de lectura pública (solo `get`) |
 | `settings/company` | datos de empresa, pagos, QR Yape (data URL), condiciones por defecto |
 
 Las imágenes se envían como URL de descarga con token de Storage. Quien

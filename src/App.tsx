@@ -6,7 +6,7 @@ import { ContactsView } from './components/ContactsView'
 import { LibraryView } from './components/LibraryView'
 import { TemplatesView } from './components/TemplatesView'
 import { SettingsView } from './components/SettingsView'
-import { useSettings } from './quotes'
+import { useAllQuotes, useSettings } from './quotes'
 import { IconImage, IconLogout, IconMessage, IconSettings, IconUsers } from './components/icons'
 import { errorMessage, useToast } from './components/toast'
 
@@ -114,6 +114,7 @@ function Shell({ user }: { user: User }) {
   const images = useImages()
   const templates = useTemplates()
   const settings = useSettings()
+  const quotes = useAllQuotes()
 
   useEffect(() => {
     seedTemplatesOnce().catch((err) => toast(errorMessage(err), 'error'))
@@ -151,6 +152,7 @@ function Shell({ user }: { user: User }) {
             images={images.data}
             templates={templates.data}
             settings={settings}
+            quotes={quotes}
           />
         )}
         {tab === 'biblioteca' && <LibraryView images={images.data} contacts={contacts.data} />}

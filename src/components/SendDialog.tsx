@@ -2,12 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from './Modal'
 import { IconCheck, IconShare, IconUpload, IconWhatsApp } from './icons'
 import { errorMessage, useToast } from './toast'
-import { recordSend, uploadImage } from '../data'
+import { recordSend, shareUrl, uploadImage } from '../data'
 import { formatPhone } from '../phone'
 import { canShareFiles, copyText, fillTemplate, waLink } from '../whatsapp'
 import type { Contact, ImageItem, Template } from '../types'
 
 const EARLY_STAGES = new Set(['nuevo', 'contactado'])
+const FOLLOW_UP_OPTIONS = [
+  { value: '', label: 'No recordar' },
+  { value: '1', label: 'Mañana' },
+  { value: '3', label: 'En 3 días' },
+  { value: '7', label: 'En 1 semana' },
+]
 
 export function SendDialog({
   contact,
@@ -38,6 +44,7 @@ export function SendDialog({
   const [shareFile, setShareFile] = useState<File | null>(null)
   const [shareError, setShareError] = useState(false)
   const [markQuoted, setMarkQuoted] = useState(EARLY_STAGES.has(contact.stage))
+  const [followUp, setFollowUp] = useState('3')
   const fileInput = useRef<HTMLInputElement>(null)
 
   // Imágenes de este contacto primero; luego la biblioteca general.
@@ -57,8 +64,9 @@ export function SendDialog({
   // Cambiar imagen o plantilla rehace el mensaje; luego se puede editar a mano.
   useEffect(() => {
     const body = template?.body ?? 'Hola {nombre}\n{enlace}'
-    setMessage(fillTemplate(body, { name: contact.name, link: image?.url ?? null }))
-  }, [template?.body, image?.url, contact.name])
+    setMessage(fillTemplate(body, { name: contact.name, link: image ? shareUrl(image) : null }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template?.body, image?.id, contact.name])
 
   // navigator.share exige el gesto del usuario "fresco": si se descargara la
   // imagen al pulsar, el navegador podría rechazarlo. Por eso se trae antes.
@@ -103,6 +111,7 @@ export function SendDialog({
       image,
       templateName: template?.name ?? null,
       stage: markQuoted && EARLY_STAGES.has(contact.stage) ? 'cotizado' : undefined,
+      followUpDays: followUp ? Number(followUp) : undefined,
     }).catch((err) => toast(errorMessage(err), 'error'))
   }
 
@@ -116,7 +125,7 @@ export function SendDialog({
   async function shareImage() {
     if (!shareFile || !image) return
     // Al compartir, la imagen ya va adjunta: el enlace sobra en el texto.
-    const text = message.replace(image.url, '').replace(/\n{3,}/g, '\n\n').trim()
+    const text = message.replace(shareUrl(image), '').replace(image.url, '').replace(/\n{3,}/g, '\n\n').trim()
     // Algunas apps descartan el texto al recibir una imagen: queda en el
     // portapapeles para pegarlo como pie de foto si hiciera falta.
     const copied = await copyText(text)
@@ -153,13 +162,23 @@ export function SendDialog({
       <div className="send-grid">
         <section>
           <h3 className="section-title">1. Imagen referencial</h3>
-          <div className="thumb-grid">
+          <div className="send-preview">
+            {image ? (
+              <a href={image.url} target="_blank" rel="noreferrer">
+                <img src={image.url} alt={image.name} />
+              </a>
+            ) : (
+              <div className="send-preview-empty">Sin imagen: solo se envía el texto</div>
+            )}
+            {image && <span className="send-preview-name">{image.name}</span>}
+          </div>
+          <div className="thumb-strip">
             <button className={`thumb thumb-none${imageId === null ? ' thumb-on' : ''}`} onClick={() => setImageId(null)}>
               Sin imagen
             </button>
             <button className="thumb thumb-upload" onClick={() => fileInput.current?.click()} disabled={uploading}>
               <IconUpload />
-              {uploading ? 'Subiendo…' : 'Subir nueva'}
+              {uploading ? 'Subiendo…' : 'Subir'}
             </button>
             {choices.map((img) => (
               <button
@@ -169,13 +188,10 @@ export function SendDialog({
                 title={img.name}
               >
                 <img src={img.url} alt={img.name} loading="lazy" />
-                <span className="thumb-label">
-                  {img.contactId ? '★ ' : ''}
-                  {img.name}
-                </span>
+                {img.contactId && <span className="thumb-star">★</span>}
                 {imageId === img.id && (
                   <span className="thumb-check">
-                    <IconCheck width={14} height={14} />
+                    <IconCheck width={12} height={12} />
                   </span>
                 )}
               </button>
@@ -213,7 +229,7 @@ export function SendDialog({
           )}
           <textarea
             className="message-box"
-            rows={7}
+            rows={6}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             aria-label="Mensaje"
@@ -230,6 +246,16 @@ export function SendDialog({
               "Abrir WhatsApp".
             </p>
           )}
+          <label className="field-inline">
+            <span>Recordar seguimiento</span>
+            <select value={followUp} onChange={(e) => setFollowUp(e.target.value)}>
+              {FOLLOW_UP_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
           {EARLY_STAGES.has(contact.stage) && (
             <label className="check">
               <input type="checkbox" checked={markQuoted} onChange={(e) => setMarkQuoted(e.target.checked)} />

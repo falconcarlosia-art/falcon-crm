@@ -1,8 +1,16 @@
 import { useState } from 'react'
-import { IconBack, IconEdit, IconFile, IconPhone, IconTrash, IconWhatsApp } from './icons'
-import { dmy, money, useQuotes } from '../quotes'
+import { IconBack, IconCopy, IconEdit, IconFile, IconPhone, IconTrash, IconWhatsApp } from './icons'
+import { dmy, money, QUOTE_STATUS, setQuoteStatus, useQuotes, type Quote, type QuoteStatus } from '../quotes'
 import { errorMessage, useToast } from './toast'
-import { deleteContact, deleteImage, moveImageToLibrary, updateContact, useSends } from '../data'
+import {
+  deleteContact,
+  deleteImage,
+  followUpDate,
+  moveImageToLibrary,
+  setFollowUp,
+  updateContact,
+  useSends,
+} from '../data'
 import { formatPhone } from '../phone'
 import { fullDate, initials } from '../format'
 import { STAGES, stageOf, type Contact, type ImageItem } from '../types'
@@ -14,6 +22,7 @@ export function ContactDetail({
   onEdit,
   onSend,
   onQuote,
+  onDuplicate,
 }: {
   contact: Contact
   images: ImageItem[]
@@ -21,6 +30,7 @@ export function ContactDetail({
   onEdit: () => void
   onSend: (imageId?: string) => void
   onQuote: () => void
+  onDuplicate: (q: Quote) => void
 }) {
   const toast = useToast()
   const sends = useSends(contact.id)
@@ -28,6 +38,19 @@ export function ContactDetail({
   const [notes, setNotes] = useState(contact.notes)
   const own = images.filter((i) => i.contactId === contact.id)
   const stage = stageOf(contact.stage)
+
+  const report = (err: unknown) => toast(errorMessage(err), 'error')
+  const followUp = contact.followUpAt?.toDate() ?? null
+
+  function changeQuoteStatus(q: Quote, status: QuoteStatus) {
+    setQuoteStatus(q.id, status).catch(report)
+    // Aceptar la cotización cierra la venta: el contacto pasa a Ganado.
+    if (status === 'aceptada' && contact.stage !== 'ganado') {
+      updateContact(contact.id, { stage: 'ganado' }).catch(report)
+      setFollowUp(contact.id, null).catch(report)
+      toast('Cotización aceptada: contacto marcado como Ganado')
+    }
+  }
 
   function saveNotes() {
     if (notes.trim() === contact.notes) return
@@ -86,6 +109,34 @@ export function ContactDetail({
         </button>
       </div>
 
+      <section className="card">
+        <h3 className="section-title">Próximo seguimiento</h3>
+        <div className="followup-row">
+          <input
+            type="date"
+            value={followUp ? toISO(followUp) : ''}
+            onChange={(e) =>
+              setFollowUp(contact.id, e.target.value ? new Date(`${e.target.value}T09:00:00`) : null).catch(report)
+            }
+            aria-label="Fecha de seguimiento"
+          />
+          {[1, 3, 7].map((d) => (
+            <button
+              key={d}
+              className="btn btn-ghost btn-sm"
+              onClick={() => setFollowUp(contact.id, followUpDate(d)).catch(report)}
+            >
+              {d === 1 ? 'Mañana' : d === 3 ? '+3 días' : '+1 semana'}
+            </button>
+          ))}
+          {followUp && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setFollowUp(contact.id, null).catch(report)}>
+              Hecho
+            </button>
+          )}
+        </div>
+      </section>
+
       {quotes.length > 0 && (
         <section className="card">
           <h3 className="section-title">Cotizaciones</h3>
@@ -103,6 +154,21 @@ export function ContactDetail({
                   <span className="quote-links">
                     <a href={q.imageUrl} target="_blank" rel="noreferrer">PNG</a>
                     <a href={q.pdfUrl} target="_blank" rel="noreferrer">PDF</a>
+                    <button className="link-btn" onClick={() => onDuplicate(q)}>
+                      <IconCopy width={13} height={13} /> Duplicar
+                    </button>
+                  </span>
+                  <span className="status-row">
+                    {(Object.keys(QUOTE_STATUS) as QuoteStatus[]).map((st) => (
+                      <button
+                        key={st}
+                        className={`chip chip-xs${(q.status ?? 'pendiente') === st ? ' chip-on' : ''}`}
+                        style={{ '--c': QUOTE_STATUS[st].color } as React.CSSProperties}
+                        onClick={() => (q.status ?? 'pendiente') !== st && changeQuoteStatus(q, st)}
+                      >
+                        {QUOTE_STATUS[st].label}
+                      </button>
+                    ))}
                   </span>
                 </div>
                 <button className="wa-quick" onClick={() => onSend(q.imageId)} aria-label={`Enviar cotización ${q.number}`}>
@@ -224,4 +290,9 @@ export function ContactDetail({
       </section>
     </div>
   )
+}
+
+function toISO(d: Date) {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
