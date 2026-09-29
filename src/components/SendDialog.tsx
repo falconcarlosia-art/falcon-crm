@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from './Modal'
-import { IconFile, IconShare, IconWhatsApp } from './icons'
+import { IconCopy, IconFile, IconMessenger, IconShare, IconWhatsApp } from './icons'
 import { errorMessage, useToast } from './toast'
 import { recordSend } from '../data'
 import { downloadBlob, type QuoteFiles } from '../files'
 import { renderQuoteFiles } from '../renderQuote'
-import { formatPhone } from '../phone'
+import { contactLine, hasWhatsApp, messengerLink } from '../phone'
 import { dmy, money, type CompanySettings, type Quote } from '../quotes'
 import { canShareFiles, copyText, fillTemplate, waLink } from '../whatsapp'
 import type { Contact, Template } from '../types'
@@ -116,7 +116,10 @@ export function SendDialog({
     [files],
   )
 
-  function log(channel: 'share' | 'chat', text: string) {
+  const wa = hasWhatsApp(contact)
+  const mLink = messengerLink(contact.handle)
+
+  function log(channel: 'share' | 'chat' | 'manual', text: string) {
     recordSend(contact.id, {
       channel,
       message: text,
@@ -135,8 +138,8 @@ export function SendDialog({
   async function shareFiles() {
     if (!files) return
     const copied = await copyText(message)
-    const both = [files.pdf, files.jpg]
-    const payload = navigator.canShare?.({ files: both }) ? both : [files.pdf]
+    const all = [files.pdf, ...files.images]
+    const payload = navigator.canShare?.({ files: all }) ? all : [files.pdf]
     try {
       await navigator.share({ files: payload })
       log('share', message)
@@ -155,24 +158,44 @@ export function SendDialog({
    */
   function openChat(withDownloads: boolean) {
     if (withDownloads && files) {
-      downloadBlob(files.pdf, files.pdf.name)
-      downloadBlob(files.jpg, files.jpg.name)
+      for (const f of [files.pdf, ...files.images]) downloadBlob(f, f.name)
     }
     window.open(waLink(contact.phone, message), '_blank', 'noopener')
     log('chat', message)
     if (withDownloads && files)
       toast(
         shareSupported
-          ? 'PDF e imagen descargados: en el chat toca el clip 📎 → Documento (PDF) o Galería (imagen).'
-          : 'PDF e imagen descargados: adjúntalos en el chat (clip 📎).',
+          ? 'Archivos descargados: en el chat toca el clip 📎 → Documento (PDF) o Galería (imágenes).'
+          : 'Archivos descargados: adjúntalos en el chat (clip 📎).',
       )
+    onClose()
+  }
+
+  /**
+   * Sin WhatsApp (cliente de Messenger): descarga los archivos, copia el
+   * mensaje y, si el alias es un usuario de Facebook, abre su chat de Messenger.
+   */
+  function prepareManual() {
+    const copied = copyText(message) // se inicia dentro del clic, antes de abrir otra ventana
+    if (files) for (const f of [files.pdf, ...files.images]) downloadBlob(f, f.name)
+    if (mLink) window.open(mLink, '_blank', 'noopener')
+    log('manual', message)
+    void copied.then((ok) =>
+      toast(
+        files
+          ? `Archivos descargados${ok ? ' y mensaje copiado' : ''}: adjúntalos en Messenger.`
+          : ok
+            ? 'Mensaje copiado: pégalo en Messenger.'
+            : 'No se pudo copiar el mensaje',
+      ),
+    )
     onClose()
   }
 
   return (
     <Modal
       wide
-      title={`Enviar a ${contact.name}`}
+      title={wa ? `Enviar a ${contact.name}` : `Preparar envío para ${contact.name}`}
       onClose={onClose}
       footer={
         <div className="send-actions">
@@ -182,7 +205,14 @@ export function SendDialog({
               Compartir archivos
             </button>
           )}
-          {quote ? (
+          {!wa ? (
+            <button className="btn btn-primary" onClick={prepareManual} disabled={(quote && !files) || !message.trim()}>
+              {quote ? <IconFile /> : <IconCopy />}
+              {quote && !files
+                ? 'Preparando…'
+                : `${quote ? 'Descargar y copiar mensaje' : 'Copiar mensaje'}${mLink ? ' · abrir Messenger' : ''}`}
+            </button>
+          ) : quote ? (
             <button className="btn btn-wa" onClick={() => openChat(true)} disabled={!files || !message.trim()}>
               <IconWhatsApp />
               {files ? 'Descargar y abrir WhatsApp' : 'Preparando…'}
@@ -225,9 +255,11 @@ export function SendDialog({
               <span>
                 <IconFile width={14} height={14} /> {files.pdf.name}
               </span>
-              <span>
-                <IconFile width={14} height={14} /> {files.jpg.name}
-              </span>
+              {files.images.map((f) => (
+                <span key={f.name}>
+                  <IconFile width={14} height={14} /> {f.name}
+                </span>
+              ))}
               <span className="muted">Emitida {dmy(quote.issueDate)}</span>
             </div>
           )}
@@ -256,10 +288,21 @@ export function SendDialog({
             aria-label="Mensaje"
           />
           <p className="muted small">
-            Para {formatPhone(contact.phone)}.{' '}
+            {!wa ? (
+              <>
+                <IconMessenger width={13} height={13} /> {contactLine(contact)}. Sin WhatsApp:{' '}
+                {quote
+                  ? 'se descargan el PDF y las imágenes y se copia el mensaje para enviarlos por Messenger.'
+                  : 'se copia el mensaje para pegarlo en Messenger.'}
+              </>
+            ) : (
+              <>
+            Para {contactLine(contact)}.{' '}
             {!quote
               ? 'Se abrirá el chat con el texto listo.'
-              : 'Se descargan el PDF y la imagen y se abre el chat con el texto: adjúntalos con el clip 📎.'}
+              : 'Se descargan el PDF y las imágenes y se abre el chat con el texto: adjúntalos con el clip 📎.'}
+              </>
+            )}
           </p>
           <label className="field-inline">
             <span>Recordar seguimiento</span>

@@ -19,6 +19,8 @@ export interface QuoteItem {
   /** id del producto en Supabase; null = ítem libre (instalación, envío…). */
   productId: string | null
   name: string
+  /** Descripción corta bajo el nombre (sale de Supabase y se puede editar). */
+  description?: string
   /** Miniatura como data URL: así el render a PNG no depende del CORS de nadie. */
   thumb: string | null
   unitPrice: number
@@ -74,6 +76,14 @@ export interface CompanySettings {
   cardTitle: string
   cardText: string
   footer: string
+  /** Frases de confianza bajo los totales, una por línea (vacío = no se muestra). */
+  highlights: string
+  /** Llamado a la acción al pie de la cotización. */
+  cta: string
+  /** Página 2 con el portafolio de productos y servicios. */
+  portfolioEnabled: boolean
+  portfolioMax: number
+  portfolioTagline: string
   validityDays: number
   conditions: QuoteConditions
 }
@@ -96,6 +106,12 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   cardTitle: '¿Prefieres tarjeta de crédito o débito vía ligo?',
   cardText: 'Solicita el enlace de pago al confirmar tu orden.',
   footer: 'Gracias por confiar en nosotros',
+  highlights:
+    'Garantía de 12 meses\nInstalación y configuración profesional\nSoporte técnico postventa\nPaga con Yape, transferencia o tarjeta',
+  cta: '¿Listo para avanzar? Confirma tu pedido y reservamos tu stock.',
+  portfolioEnabled: true,
+  portfolioMax: 20,
+  portfolioTagline: 'Domótica, seguridad y automatización para tu hogar y negocio',
   validityDays: 8,
   conditions: {
     payment: '50 % de adelanto, saldo contra entrega.',

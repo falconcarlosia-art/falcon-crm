@@ -18,8 +18,13 @@ export function stageOf(id: string | undefined) {
 export interface Contact {
   id: string
   name: string
-  /** Solo dígitos con código de país (p. ej. 51931324454), listo para wa.me. */
+  /**
+   * Solo dígitos con código de país (p. ej. 51931324454), listo para wa.me.
+   * Vacío si el cliente llegó por Messenger y aún no dio su número.
+   */
   phone: string
+  /** Alias o enlace de Messenger/Facebook (opcional). */
+  handle?: string
   stage: StageId
   tags: string[]
   notes: string
@@ -37,8 +42,11 @@ export interface Template {
   createdAt?: Timestamp
 }
 
-/** share = compartido desde el celular con archivos; chat = se abrió WhatsApp (en PC con descarga). */
-export type SendChannel = 'share' | 'chat'
+/**
+ * share = compartido desde el celular con archivos; chat = se abrió WhatsApp;
+ * manual = sin WhatsApp: se descargaron los archivos o se copió el mensaje (Messenger).
+ */
+export type SendChannel = 'share' | 'chat' | 'manual'
 
 export interface SendRecord {
   id: string

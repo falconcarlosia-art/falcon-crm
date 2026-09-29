@@ -59,7 +59,7 @@ export const useSends = (contactId: string) =>
 
 // ---- Contactos ----
 
-export type ContactInput = Pick<Contact, 'name' | 'phone' | 'stage' | 'tags' | 'notes'>
+export type ContactInput = Pick<Contact, 'name' | 'phone' | 'stage' | 'tags' | 'notes'> & { handle?: string }
 
 const DAY = 86_400_000
 

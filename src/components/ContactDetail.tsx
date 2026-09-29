@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconBack, IconCopy, IconEdit, IconFile, IconPhone, IconSparkle, IconTrash, IconWhatsApp } from './icons'
+import { IconBack, IconCopy, IconEdit, IconFile, IconPhone, IconSparkle, IconMessenger, IconTrash, IconWhatsApp } from './icons'
 import {
   dmy,
   money,
@@ -18,7 +18,8 @@ import {
   updateContact,
   useSends,
 } from '../data'
-import { formatPhone } from '../phone'
+import { formatPhone, hasWhatsApp, messengerLink } from '../phone'
+import { ReachIcon, reachClass } from './ReachIcon'
 import { downloadBlob } from '../files'
 import { renderQuoteFiles } from '../renderQuote'
 import { fullDate, initials } from '../format'
@@ -53,14 +54,16 @@ export function ContactDetail({
 
   const report = (err: unknown) => toast(errorMessage(err), 'error')
   const followUp = contact.followUpAt?.toDate() ?? null
+  const wa = hasWhatsApp(contact)
+  const mLink = messengerLink(contact.handle)
 
   /** Imagen y PDF no están guardados: se vuelven a dibujar desde los datos. */
   async function downloadQuote(q: Quote, kind: 'img' | 'pdf') {
     setBusyQuote(q.id)
     try {
       const f = await renderQuoteFiles(q, company)
-      const file = kind === 'img' ? f.jpg : f.pdf
-      downloadBlob(file, file.name)
+      // "Imagen" baja una por página (cotización y portafolio).
+      for (const file of kind === 'img' ? f.images : [f.pdf]) downloadBlob(file, file.name)
       URL.revokeObjectURL(f.previewUrl)
     } catch (err) {
       report(err)
@@ -107,9 +110,21 @@ export function ContactDetail({
         </div>
         <div className="detail-id">
           <h2>{contact.name}</h2>
-          <a className="muted" href={`tel:+${contact.phone}`}>
-            {formatPhone(contact.phone)}
-          </a>
+          {wa && (
+            <a className="muted" href={`tel:+${contact.phone}`}>
+              {formatPhone(contact.phone)}
+            </a>
+          )}
+          {contact.handle?.trim() &&
+            (mLink ? (
+              <a className="muted small detail-handle" href={mLink} target="_blank" rel="noopener">
+                <IconMessenger width={14} height={14} /> {contact.handle}
+              </a>
+            ) : (
+              <span className="muted small detail-handle">
+                <IconMessenger width={14} height={14} /> {contact.handle}
+              </span>
+            ))}
         </div>
         <div className="detail-tools">
           <button className="icon-btn" onClick={onEdit} aria-label="Editar">
@@ -121,15 +136,38 @@ export function ContactDetail({
         </div>
       </div>
 
+      {!wa && (
+        <p className="no-wa-note">
+          Sin WhatsApp: la cotización se descarga (o se comparte) para enviarla por Messenger. Cuando te pase su
+          número, agrégalo con <b>Editar</b> y se activa WhatsApp.
+        </p>
+      )}
+
       <div className="detail-actions">
-        <button className="btn btn-wa btn-lg" onClick={() => onSend()}>
-          <IconWhatsApp />
-          Enviar por WhatsApp
-        </button>
-        <a className="btn btn-ghost btn-lg" href={`tel:+${contact.phone}`}>
-          <IconPhone />
-          Llamar
-        </a>
+        {wa ? (
+          <button className="btn btn-wa btn-lg" onClick={() => onSend()}>
+            <IconWhatsApp />
+            Enviar por WhatsApp
+          </button>
+        ) : (
+          <button className="btn btn-ghost btn-lg" onClick={() => onSend()}>
+            <IconMessenger />
+            Preparar envío
+          </button>
+        )}
+        {wa ? (
+          <a className="btn btn-ghost btn-lg" href={`tel:+${contact.phone}`}>
+            <IconPhone />
+            Llamar
+          </a>
+        ) : (
+          mLink && (
+            <a className="btn btn-ghost btn-lg" href={mLink} target="_blank" rel="noopener">
+              <IconMessenger />
+              Abrir Messenger
+            </a>
+          )
+        )}
         <button className="btn btn-primary btn-lg" onClick={onQuote}>
           <IconFile />
           Nueva cotización
@@ -187,7 +225,7 @@ export function ContactDetail({
                       PDF
                     </button>
                     <button className="link-btn" onClick={() => downloadQuote(q, 'img')} disabled={busyQuote === q.id}>
-                      Imagen
+                      Imágenes
                     </button>
                     <button className="link-btn" onClick={() => onDuplicate(q)}>
                       <IconCopy width={13} height={13} /> Duplicar
@@ -206,8 +244,12 @@ export function ContactDetail({
                     ))}
                   </span>
                 </div>
-                <button className="wa-quick" onClick={() => onSend(q.id)} aria-label={`Enviar cotización ${q.number}`}>
-                  <IconWhatsApp />
+                <button
+                  className={`wa-quick${reachClass(contact)}`}
+                  onClick={() => onSend(q.id)}
+                  aria-label={`Enviar cotización ${q.number}`}
+                >
+                  <ReachIcon contact={contact} />
                 </button>
               </li>
             ))}
@@ -267,7 +309,11 @@ export function ContactDetail({
                 <div className="timeline-head">
                   <b>{s.templateName ?? 'Mensaje'}</b>
                   <span className="muted small">
-                    {fullDate(s.sentAt)} · {s.channel === 'share' ? 'compartido desde el celular' : 'chat abierto'}
+                    {fullDate(s.sentAt)} · {s.channel === 'share'
+                      ? 'compartido desde el celular'
+                      : s.channel === 'manual'
+                        ? 'preparado para Messenger'
+                        : 'chat abierto'}
                   </span>
                 </div>
                 <div className="timeline-body">

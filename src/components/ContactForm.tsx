@@ -27,6 +27,7 @@ export function ContactForm({
   const toast = useToast()
   const [name, setName] = useState(contact?.name ?? '')
   const [phone, setPhone] = useState(contact ? formatPhone(contact.phone) : '')
+  const [handle, setHandle] = useState(contact?.handle ?? '')
   const [stage, setStage] = useState<StageId>(contact?.stage ?? 'nuevo')
   const [tags, setTags] = useState(contact?.tags.join(', ') ?? '')
   const [notes, setNotes] = useState(contact?.notes ?? '')
@@ -34,11 +35,21 @@ export function ContactForm({
   const digits = normalizePhone(phone)
   const phoneOk = isValidPhone(digits)
   const duplicate = phoneOk ? contacts.find((c) => c.phone === digits && c.id !== contact?.id) : undefined
+  // El número es opcional si hay alias de Messenger; si se escribe, tiene que estar completo.
+  const reachOk = phone.trim() ? phoneOk : Boolean(handle.trim())
+  const canSave = Boolean(name.trim()) && reachOk
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !phoneOk) return
-    const input = { name: name.trim(), phone: digits, stage, tags: parseTags(tags), notes: notes.trim() }
+    if (!canSave) return
+    const input = {
+      name: name.trim(),
+      phone: phone.trim() ? digits : '',
+      handle: handle.trim(),
+      stage,
+      tags: parseTags(tags),
+      notes: notes.trim(),
+    }
     // Con la caché offline la escritura se confirma al volver la señal, así que
     // no se espera al servidor para cerrar: los errores llegan por aviso.
     const report = (err: unknown) => toast(errorMessage(err), 'error')
@@ -63,7 +74,7 @@ export function ContactForm({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" form="contact-form" className="btn btn-primary" disabled={!name.trim() || !phoneOk}>
+          <button type="submit" form="contact-form" className="btn btn-primary" disabled={!canSave}>
             Guardar
           </button>
         </>
@@ -83,14 +94,27 @@ export function ContactForm({
             placeholder="931 324 454"
             inputMode="tel"
             autoComplete="tel"
-            required
           />
           <small className={phone && !phoneOk ? 'hint hint-error' : 'hint'}>
             {phone && !phoneOk
               ? 'Número incompleto'
               : duplicate
                 ? `Ojo: ya existe "${duplicate.name}" con este número`
-                : 'Sin código se asume Perú (+51). Para otro país escribe +código.'}
+                : 'Sin código se asume Perú (+51). Opcional si llegó por Messenger.'}
+          </small>
+        </label>
+        <label className="field">
+          <span>Messenger / Facebook</span>
+          <input
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            placeholder="@usuario, enlace del perfil o nombre en Messenger"
+            autoComplete="off"
+          />
+          <small className={!phone.trim() && !handle.trim() && name.trim() ? 'hint hint-error' : 'hint'}>
+            {!phone.trim() && !handle.trim() && name.trim()
+              ? 'Pon el celular o, si llegó por Facebook, su alias de Messenger.'
+              : 'Sin número, el contacto se atiende por Messenger: la cotización se descarga para enviarla allí.'}
           </small>
         </label>
         <div className="field">

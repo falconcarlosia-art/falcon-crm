@@ -19,6 +19,12 @@ const cfg = {
     .map((c) => c.trim())
     .filter(Boolean),
   bucket: env.VITE_PRODUCTS_IMAGE_BUCKET || '',
+  // Opcionales: descripción corta en la cotización y portafolio (página 2).
+  desc: env.VITE_PRODUCTS_COL_DESC || '',
+  category: env.VITE_PRODUCTS_COL_CATEGORY || '',
+  brand: env.VITE_PRODUCTS_COL_BRAND || '',
+  featured: env.VITE_PRODUCTS_COL_FEATURED || '',
+  servicesTable: env.VITE_SERVICES_TABLE || '',
   priceWithoutIgv: env.VITE_PRODUCTS_PRICE_WITHOUT_IGV === 'true',
 }
 
@@ -34,6 +40,18 @@ export interface Product {
   sku: string | null
   /** Texto extra para la búsqueda (marca, modelo…). */
   keywords?: string
+  /** Descripción corta (una o dos líneas) para la cotización. */
+  description: string
+  category: string
+  brand: string
+  /** Destacado: sale primero en el portafolio. */
+  featured: boolean
+}
+
+export interface Service {
+  id: string
+  title: string
+  category: string
 }
 
 let cache: Promise<Product[]> | null = null
@@ -51,7 +69,13 @@ export function loadProducts(force = false): Promise<Product[]> {
 }
 
 async function fetchAll(sb: SupabaseClient): Promise<Product[]> {
-  const cols = [cfg.id, cfg.name, cfg.price, cfg.image, cfg.sku, ...cfg.extra].filter(Boolean).join(',')
+  const cols = [
+    ...new Set(
+      [cfg.id, cfg.name, cfg.price, cfg.image, cfg.sku, cfg.desc, cfg.category, cfg.brand, cfg.featured, ...cfg.extra].filter(
+        Boolean,
+      ),
+    ),
+  ].join(',')
   const out: Product[] = []
   const PAGE = 1000
   for (let from = 0; ; from += PAGE) {
@@ -91,6 +115,10 @@ function toProduct(sb: SupabaseClient, r: Record<string, unknown>): Product {
     imageUrl: img || null,
     sku: cfg.sku && r[cfg.sku] != null ? String(r[cfg.sku]) : null,
     keywords: cfg.extra.map((c) => (r[c] == null ? '' : String(r[c]))).join(' '),
+    description: cfg.desc ? shortText(r[cfg.desc]) : '',
+    category: cfg.category && r[cfg.category] != null ? String(r[cfg.category]).trim() : '',
+    brand: cfg.brand && r[cfg.brand] != null ? String(r[cfg.brand]).trim() : '',
+    featured: cfg.featured ? r[cfg.featured] === true : false,
   }
 }
 
@@ -110,3 +138,43 @@ const normalize = (s: string) =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+
+/**
+ * Resume una descripción larga a una o dos líneas: sin HTML ni markdown, hasta
+ * el primer punto si cabe, o cortada en una palabra con "…".
+ */
+export function shortText(raw: unknown, max = 120): string {
+  if (typeof raw !== 'string') return ''
+  const s = raw
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[*_#>`]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (s.length <= max) return s
+  const dot = s.slice(0, max).search(/[.!?](\s|$)(?!.*[.!?](\s|$))/)
+  if (dot >= 40) return s.slice(0, dot + 1)
+  const cut = s.slice(0, max - 1)
+  return cut.slice(0, Math.max(cut.lastIndexOf(' '), 40)).replace(/[,;:\s-]+$/, '') + '…'
+}
+
+let servicesCache: Promise<Service[]> | null = null
+
+/** Servicios de la empresa (tabla opcional) para el portafolio. Si no hay permiso, lista vacía. */
+export function loadServices(): Promise<Service[]> {
+  if (!client || !cfg.servicesTable) return Promise.resolve([])
+  if (!servicesCache) {
+    const sb = client
+    servicesCache = (async () => {
+      let q = sb.from(cfg.servicesTable).select('id,title,category' as '*').order('title')
+      q = q.filter('active', 'eq', true)
+      const { data, error } = await q
+      if (error) return []
+      return ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => ({
+        id: String(r.id),
+        title: String(r.title ?? '').trim(),
+        category: String(r.category ?? '').trim(),
+      })).filter((x) => x.title)
+    })()
+  }
+  return servicesCache
+}

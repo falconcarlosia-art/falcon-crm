@@ -86,3 +86,10 @@ export const IconInstall = (p: P) => (
 export const IconShareIOS = (p: P) => (
   <svg {...base(p)}><path d="M12 3v12M8 7l4-4 4 4M8 11H6v10h12V11h-2" /></svg>
 )
+/** Burbuja de Messenger (contactos sin WhatsApp). */
+export const IconMessenger = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 3C7 3 3 6.7 3 11.3c0 2.6 1.3 4.9 3.3 6.4V21l3-1.7c.9.3 1.8.4 2.7.4 5 0 9-3.7 9-8.3S17 3 12 3z" />
+    <path d="M7.5 13.5l3-3.2 2.2 2.2 3.8-3.5" />
+  </svg>
+)

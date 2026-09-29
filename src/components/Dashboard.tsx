@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { IconCheck, IconWhatsApp } from './icons'
+import { IconCheck } from './icons'
+import { ReachIcon, reachClass, reachLabel } from './ReachIcon'
 import { errorMessage, useToast } from './toast'
 import { followUpDate, setFollowUp } from '../data'
 import { initials } from '../format'
@@ -134,8 +135,8 @@ export function Dashboard({
                   >
                     <IconCheck width={18} height={18} />
                   </button>
-                  <button className="wa-quick" onClick={() => onFollowUp(c)} aria-label={`Escribir a ${c.name}`}>
-                    <IconWhatsApp width={18} height={18} />
+                  <button className={`wa-quick${reachClass(c)}`} onClick={() => onFollowUp(c)} aria-label={reachLabel(c)} title={reachLabel(c)}>
+                    <ReachIcon contact={c} size={18} />
                   </button>
                 </li>
               )

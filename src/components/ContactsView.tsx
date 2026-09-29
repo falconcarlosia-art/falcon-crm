@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { IconBoard, IconList, IconPlus, IconSearch, IconUpload, IconWhatsApp } from './icons'
+import { IconBoard, IconList, IconPlus, IconSearch, IconUpload } from './icons'
 import { BoardView } from './BoardView'
 import { ContactDetail } from './ContactDetail'
 import { ContactForm } from './ContactForm'
@@ -10,7 +10,8 @@ import { QuoteEditor } from './QuoteEditor'
 import type { CompanySettings, Quote } from '../quotes'
 import type { AiConfig } from '../ai'
 import { AnalyzeChatDialog } from './AnalyzeChatDialog'
-import { formatPhone } from '../phone'
+import { contactLine } from '../phone'
+import { ReachIcon, reachClass, reachLabel } from './ReachIcon'
 import { initials, relDate } from '../format'
 import { STAGES, stageOf, type Contact, type Template } from '../types'
 import type { QuoteFiles } from '../files'
@@ -78,7 +79,8 @@ export function ContactsView({
       if (!q) return true
       return (
         c.name.toLowerCase().includes(q) ||
-        (qDigits.length >= 3 && c.phone.includes(qDigits)) ||
+        (qDigits.length >= 3 && (c.phone ?? '').includes(qDigits)) ||
+        (c.handle ?? '').toLowerCase().includes(q) ||
         c.tags.some((t) => t.includes(q)) ||
         c.notes.toLowerCase().includes(q)
       )
@@ -247,7 +249,7 @@ export function ContactsView({
                           <span className="due-overdue">● Toca seguimiento</span>
                         ) : (
                           <>
-                            {formatPhone(c.phone)}
+                            {contactLine(c)}
                             {c.lastSentAt && <> · enviado {relDate(c.lastSentAt)}</>}
                           </>
                         )}
@@ -258,11 +260,12 @@ export function ContactsView({
                     </span>
                   </button>
                   <button
-                    className="wa-quick"
+                    className={`wa-quick${reachClass(c)}`}
                     onClick={() => (due ? followUp(c) : setDialog({ kind: 'send', contact: c }))}
-                    aria-label={`Enviar WhatsApp a ${c.name}`}
+                    aria-label={reachLabel(c)}
+                    title={reachLabel(c)}
                   >
-                    <IconWhatsApp />
+                    <ReachIcon contact={c} />
                   </button>
                 </li>
               )

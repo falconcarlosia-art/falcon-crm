@@ -6,6 +6,11 @@ en https://crm-falcons.web.app.
 
 - **Contactos**: nombre, número (+51 por defecto), etapa, etiquetas y notas.
   Tienen búsqueda, filtro por etapa e historial de envíos.
+  - **Sin WhatsApp** (llegó por Facebook/Messenger): el número es opcional si
+    se pone su alias de Messenger. El botón de WhatsApp pasa a *Preparar
+    envío*: descarga la cotización y copia el mensaje para pegarlo en
+    Messenger; si el alias es un usuario (`@usuario` o enlace del perfil),
+    abre su chat en `m.me`. Al agregar el número se activa WhatsApp.
 - **Cotizaciones**: desde la ficha, en *Nueva cotización*, eliges productos del
   catálogo de Supabase o agregas ítems libres, ajustas precio, cantidad,
   fechas y condiciones, y la app genera la cotización.
@@ -16,6 +21,16 @@ en https://crm-falcons.web.app.
     con una transacción en `counters/quote-AAAA-DDMM`, así que requiere
     conexión.
   - Precios con IGV. El valor de venta y el IGV (18 %) se desglosan del total.
+  - Cada producto lleva su **descripción corta** (sale de `description` en
+    Supabase, resumida a una o dos líneas, y se puede editar).
+  - Diseño comercial: franja *por qué elegirnos* (frases con ícono), condiciones
+    compactas en dos columnas, pagos en una franja, llamado a la acción con
+    teléfono y web, y la condición comercial en letra pequeña.
+  - **Página 2: portafolio** (se activa en Ajustes): líneas de producto,
+    grilla con foto de los productos (destacados primero y repartidos entre
+    categorías, hasta el máximo configurado), servicios, datos de contacto y
+    un QR a la web. Va como segunda página del PDF y como segunda imagen; se
+    dibuja una vez por sesión.
   - Los datos de la empresa, las cuentas, el QR de Yape y las condiciones por
     defecto se editan en **Ajustes**. Como los archivos se regeneran, una
     cotización antigua se dibuja con los ajustes actuales.
@@ -91,8 +106,9 @@ cotización siempre se dibuje igual, sin depender de Google Fonts.
    npx firebase-tools deploy --only firestore:rules
    ```
 4. Catálogo de productos (Supabase). Ya está conectado a la tabla `products`
-   (`title`, `price`, primera foto de `images`, `sku`, solo `active`; también
-   se busca por `brand` y `model`). En `.env.production` van
+   (`title`, `price`, primera foto de `images`, `sku`, `description`,
+   `category`, `brand`, `featured`, solo `active`; también se busca por
+   `brand` y `model`) y a `services` (`title`) para el portafolio. En `.env.production` van
    `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (nunca la `service_role`) y el
    mapeo de tabla y columnas `VITE_PRODUCTS_*` (ver `.env.example`). La anon key
    necesita permiso de lectura; si la tabla tiene RLS:
@@ -118,12 +134,12 @@ npm run build && npx firebase-tools deploy --only hosting
 
 | Colección | Contenido |
 | --- | --- |
-| `contacts/{id}` | `name`, `phone` (solo dígitos, con código de país), `stage`, `tags[]`, `notes`, `lastSentAt`, `followUpAt` |
-| `contacts/{id}/sends/{id}` | historial: `channel` (`share`/`chat`), `message`, `quoteId`, `quoteNumber`, `templateName`, `sentAt` |
+| `contacts/{id}` | `name`, `phone` (solo dígitos, con código de país; vacío si solo tiene Messenger), `handle` (alias de Messenger), `stage`, `tags[]`, `notes`, `lastSentAt`, `followUpAt` |
+| `contacts/{id}/sends/{id}` | historial: `channel` (`share`/`chat`/`manual`), `message`, `quoteId`, `quoteNumber`, `templateName`, `sentAt` |
 | `quotes/{id}` | `number`, `contactId`, `clientName`, `issueDate`, `validUntil`, `items[]` (con miniatura del producto), `conditions`, `total`, `status` |
 | `templates/{id}` | `name`, `body` |
 | `counters/quote-AAAA-DDMM` | `last`: último correlativo del día |
-| `settings/company` | datos de empresa, pagos, QR Yape (data URL), condiciones por defecto |
+| `settings/company` | datos de empresa, pagos, QR Yape (data URL), condiciones por defecto, frases *por qué elegirnos*, llamado a la acción y opciones del portafolio |
 | `private/ai` | `apiKey` de OpenRouter, `quoteModel`, `chatModel` |
 
 Cuota gratuita de Firestore (Spark): 1 GiB guardado, 50.000 lecturas y 20.000

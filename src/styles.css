@@ -164,6 +164,9 @@ img { display: block; max-width: 100%; }
   box-shadow: 0 2px 8px rgba(37, 211, 102, 0.35);
 }
 .wa-quick:hover { background: var(--wa-dark); }
+/* Sin WhatsApp (solo Messenger): botón neutro, abre el envío por descarga. */
+.wa-quick.reach-off, .board-wa.reach-off { background: #e8ecf2; color: #5b6778; box-shadow: none; }
+.wa-quick.reach-off:hover, .board-wa.reach-off:hover { background: #dce2ea; color: var(--text); }
 .avatar {
   flex: none; width: 40px; height: 40px; border-radius: 50%;
   display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 14px;
@@ -185,7 +188,8 @@ img { display: block; max-width: 100%; }
 .detail-id { flex: 1; min-width: 0; }
 .detail-id h2 { font-size: 20px; overflow-wrap: anywhere; }
 .detail-tools { display: flex; }
-.detail-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.detail-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.detail-actions .btn { min-width: 0; padding-left: 12px; padding-right: 12px; }
 .detail-empty {
   height: 100%; min-height: 320px; display: grid; place-content: center; justify-items: center; gap: 12px;
   text-align: center; color: var(--muted); padding: 24px; border: 2px dashed var(--line); border-radius: var(--radius);
@@ -345,6 +349,7 @@ img { display: block; max-width: 100%; }
 .qe-form { display: grid; gap: 14px; align-content: start; }
 .qe-preview { background: #d9dee6; }
 .qe-scaled { overflow: hidden; box-shadow: 0 6px 24px rgba(15, 23, 36, 0.18); }
+.qe-page-label { margin: 22px 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6778; }
 .qe-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .qe-search { position: relative; margin-bottom: 12px; }
 .qe-results {
@@ -444,6 +449,12 @@ select {
 
 /* 4. Nombre del ítem: crece con el texto en vez de cortarse. */
 .qe .qe-item-name { resize: none; line-height: 1.35; font-family: inherit; field-sizing: content; }
+.qe .qe-item-desc {
+  width: 100%; border: 1px solid transparent; border-radius: 8px; padding: 2px 6px; background: none;
+  resize: none; font: inherit; font-size: 13px; line-height: 1.35; color: var(--muted); field-sizing: content;
+}
+.qe .qe-item-desc:focus { border-color: var(--orange); outline: none; color: var(--text); }
+.qe .qe-item-desc:placeholder-shown { font-style: italic; }
 
 /* Contenido que no debe ensanchar su columna (grid items tienen min-width: auto). */
 .detail, .detail > *, .qe-form > *, .qe-row > *, .board-col, .board-card { min-width: 0; }
@@ -600,3 +611,10 @@ select {
   color: #9a5a00; background: #fff4e5; border-radius: 6px; padding: 3px 8px; height: fit-content;
 }
 .link-btn:disabled { opacity: 0.5; }
+
+/* Contacto sin WhatsApp (llegó por Messenger/Facebook). */
+.detail-handle { display: flex; align-items: center; gap: 5px; margin-top: 2px; width: fit-content; }
+.no-wa-note {
+  margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45;
+  background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe;
+}

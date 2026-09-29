@@ -1,6 +1,7 @@
 import './quote-sheet.css'
 import { forwardRef } from 'react'
 import { FalconMark } from './FalconLogo'
+import { SheetIcon, iconFor } from './sheetIcons'
 import { dmy, money, totals, type CompanySettings, type QuoteConditions, type QuoteItem } from '../quotes'
 
 export interface QuoteSheetData {
@@ -20,6 +21,21 @@ export const QuoteSheet = forwardRef<HTMLDivElement, { data: QuoteSheetData; com
   function QuoteSheet({ data, company: c }, ref) {
     const t = totals(data.items)
     const cond = data.conditions
+    const highlights = (c.highlights ?? '')
+      .split('\n')
+      .map((h) => h.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+    const conds = (
+      [
+        ['Pago', cond.payment],
+        ['Entrega', cond.delivery],
+        ['Garantía', cond.warranty],
+        ['Stock', cond.stock],
+        ['Despacho desde', cond.origin],
+      ] as const
+    ).filter(([, v]) => v.trim())
+    const hasPay = Boolean(c.yapeQr || c.yapeName || c.account || c.cci || c.cardTitle)
     return (
       <div ref={ref} className="qs">
         <header className="qs-head">
@@ -98,7 +114,10 @@ export const QuoteSheet = forwardRef<HTMLDivElement, { data: QuoteSheetData; com
                   <td>
                     <div className="qs-desc">
                       {it.thumb && <img src={it.thumb} alt="" />}
-                      <b>{it.name}</b>
+                      <div>
+                        <b>{it.name}</b>
+                        {it.description?.trim() && <div className="qs-desc-text">{it.description}</div>}
+                      </div>
                     </div>
                   </td>
                   <td className="qs-num qs-soft">{money(it.unitPrice)}</td>
@@ -110,8 +129,13 @@ export const QuoteSheet = forwardRef<HTMLDivElement, { data: QuoteSheetData; com
               ))}
             </tbody>
           </table>
-          <p className="qs-note">Los precios unitarios incluyen IGV.</p>
-          <div className="qs-totals">
+          <div className="qs-sum">
+            <p className="qs-note">
+              Los precios unitarios incluyen IGV.
+              <br />
+              Precios válidos hasta el <b>{dmy(data.validUntil)}</b>.
+            </p>
+            <div className="qs-totals">
             <div>
               <span>Valor de venta</span>
               <span>{money(t.base)}</span>
@@ -124,29 +148,38 @@ export const QuoteSheet = forwardRef<HTMLDivElement, { data: QuoteSheetData; com
               <span>TOTAL</span>
               <span>{money(t.total)}</span>
             </div>
+            </div>
           </div>
         </section>
 
-        <section className="qs-bottom">
-          <div className="qs-conds">
-            {(
-              [
-                ['Forma de pago', cond.payment],
-                ['Tiempo de entrega', cond.delivery],
-                ['Origen del envío', cond.origin],
-                ['Garantía', cond.warranty],
-                ['Validez del stock', cond.stock],
-              ] as const
-            )
-              .filter(([, v]) => v.trim())
-              .map(([k, v]) => (
+        {highlights.length > 0 && (
+          <section className="qs-highlights" style={{ gridTemplateColumns: `repeat(${highlights.length}, 1fr)` }}>
+            {highlights.map((h) => (
+              <div key={h}>
+                <span className="qs-hl-icon">
+                  <SheetIcon name={iconFor(h)} />
+                </span>
+                <span>{h}</span>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {conds.length > 0 && (
+          <section className="qs-conds">
+            <div className="qs-label">Condiciones</div>
+            <div className="qs-conds-grid">
+              {conds.map(([k, v]) => (
                 <div key={k}>
-                  <div className="qs-label qs-label-orange">{k}</div>
-                  <div>{v}</div>
+                  <b>{k}:</b> {v}
                 </div>
               ))}
-          </div>
-          <aside className="qs-pay">
+            </div>
+          </section>
+        )}
+
+        {hasPay && (
+          <section className="qs-pay">
             {(c.yapeQr || c.yapeName) && (
               <div className="qs-yape">
                 {c.yapeQr && <img src={c.yapeQr} alt="QR Yape" />}
@@ -157,23 +190,13 @@ export const QuoteSheet = forwardRef<HTMLDivElement, { data: QuoteSheetData; com
               </div>
             )}
             {/* Cada dato de pago sale solo si está cargado en Ajustes. */}
-            {c.account && (
-              <>
+            {(c.account || c.cci) && (
+              <div className="qs-bank">
                 <div className="qs-label">{c.bankLabel}</div>
-                <div>{c.account}</div>
-              </>
-            )}
-            {c.cci && (
-              <>
-                <div className="qs-label qs-mt-s">Código interbancario (CCI)</div>
-                <div>{c.cci}</div>
-              </>
-            )}
-            {c.holder && (c.account || c.cci) && (
-              <>
-                <div className="qs-label qs-mt-s">Titular</div>
-                <div>{c.holder}</div>
-              </>
+                {c.account && <div>{c.account}</div>}
+                {c.cci && <div className="qs-soft">CCI {c.cci}</div>}
+                {c.holder && <div className="qs-soft">{c.holder}</div>}
+              </div>
             )}
             {c.cardTitle && (
               <div className="qs-card">
@@ -181,20 +204,26 @@ export const QuoteSheet = forwardRef<HTMLDivElement, { data: QuoteSheetData; com
                 <div className="qs-soft">{c.cardText}</div>
               </div>
             )}
-          </aside>
-        </section>
-
-        {cond.commercial.trim() && (
-          <section className="qs-commercial">
-            <div className="qs-label qs-label-orange">Condición comercial</div>
-            <div className="qs-soft">{cond.commercial}</div>
           </section>
         )}
+
+        {c.cta?.trim() && (
+          <section className="qs-cta">
+            <div className="qs-cta-text">{c.cta}</div>
+            <div className="qs-cta-contact">
+              <SheetIcon name="phone" size={18} /> {c.phone}
+              <span className="qs-cta-sep" />
+              <SheetIcon name="globe" size={18} /> {c.web}
+            </div>
+          </section>
+        )}
+
+        {cond.commercial.trim() && <p className="qs-fine">{cond.commercial}</p>}
 
         <footer className="qs-foot">
           <div className="qs-foot-thanks">{c.footer.toUpperCase()}</div>
           <div className="qs-foot-legal">
-            {c.legalName} · RUC {c.ruc}
+            {c.legalName} · RUC {c.ruc} · {c.web}
           </div>
         </footer>
       </div>

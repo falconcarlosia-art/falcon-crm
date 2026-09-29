@@ -6,7 +6,10 @@ import { productsConfigured } from '../supabase'
 import { AiSettings } from './AiSettings'
 import type { AiConfig } from '../ai'
 
-type TextKey = Exclude<keyof CompanySettings, 'yapeQr' | 'validityDays' | 'conditions'>
+type TextKey = Exclude<
+  keyof CompanySettings,
+  'yapeQr' | 'validityDays' | 'conditions' | 'portfolioEnabled' | 'portfolioMax' | 'highlights'
+>
 
 const COMPANY: [TextKey, string][] = [
   ['legalName', 'Razón social'],
@@ -114,6 +117,55 @@ export function SettingsView({ settings, ai }: { settings: CompanySettings; ai: 
           />
         </div>
         <div className="form settings-grid">{PAYMENT.map(([k, l]) => text(k, l))}</div>
+      </section>
+
+      <section className="card">
+        <h3 className="section-title">Presentación de la cotización</h3>
+        <div className="form">
+          <label className="field">
+            <span>Por qué elegirnos (hasta 4 frases, una por línea)</span>
+            <textarea
+              rows={4}
+              value={form.highlights}
+              placeholder={'Garantía de 12 meses\nInstalación profesional'}
+              onChange={(e) => set({ highlights: e.target.value })}
+            />
+            <small className="muted">
+              Salen bajo el total con un ícono según la palabra (garantía, instalación, soporte, pago, envío…). Vacío = no
+              se muestra.
+            </small>
+          </label>
+          <label className="field">
+            <span>Llamado a la acción (va con tu teléfono y web)</span>
+            <input value={form.cta} onChange={(e) => set({ cta: e.target.value })} />
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={form.portfolioEnabled}
+              onChange={(e) => set({ portfolioEnabled: e.target.checked })}
+            />
+            Agregar el portafolio de productos como página 2
+          </label>
+          {form.portfolioEnabled && (
+            <div className="qe-row">
+              <label className="field">
+                <span>Frase del portafolio</span>
+                <input value={form.portfolioTagline} onChange={(e) => set({ portfolioTagline: e.target.value })} />
+              </label>
+              <label className="field">
+                <span>Productos a mostrar</span>
+                <input
+                  type="number"
+                  min={4}
+                  max={60}
+                  value={form.portfolioMax}
+                  onChange={(e) => set({ portfolioMax: Math.min(60, Math.max(4, e.target.valueAsNumber || 4)) })}
+                />
+              </label>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="card">

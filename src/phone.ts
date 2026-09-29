@@ -27,3 +27,26 @@ export function formatPhone(digits: string): string {
   }
   return digits ? `+${digits}` : ''
 }
+
+// ---- Alcance del contacto: WhatsApp o solo Messenger/Facebook ----
+
+/** El contacto tiene un número válido para wa.me. */
+export const hasWhatsApp = (c: { phone?: string }) => isValidPhone(c.phone ?? '')
+
+/** Línea bajo el nombre: el número o, si no hay, el alias de Messenger. */
+export function contactLine(c: { phone?: string; handle?: string }): string {
+  if (hasWhatsApp(c)) return formatPhone(c.phone!)
+  return c.handle?.trim() ? `Messenger: ${c.handle.trim()}` : 'Sin número'
+}
+
+/**
+ * Enlace directo a Messenger si el alias es un usuario de Facebook
+ * (@usuario, facebook.com/usuario o m.me/usuario). Un nombre con espacios no
+ * sirve: se usa como referencia y se escribe desde la bandeja de la página.
+ */
+export function messengerLink(handle: string | undefined): string | null {
+  const h = (handle ?? '').trim()
+  const url = h.match(/(?:facebook\.com|fb\.com|m\.me|messenger\.com\/t)\/(?:profile\.php\?id=)?([A-Za-z0-9.]+)/i)
+  const user = url ? url[1] : /^@?[A-Za-z0-9.]{5,}$/.test(h) ? h.replace(/^@/, '') : null
+  return user ? `https://m.me/${user}` : null
+}

@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { QuoteSheet } from './QuoteSheet'
+import { PortfolioSheet } from './PortfolioSheet'
+import { loadPortfolio, type PortfolioData } from '../portfolio'
 import { IconPlus, IconSearch, IconTrash, IconX } from './icons'
 import { errorMessage, useToast } from './toast'
 import { loadProducts, productsConfigured, searchProducts, type Product } from '../supabase'
@@ -19,7 +21,7 @@ import {
 } from '../quotes'
 import type { Contact } from '../types'
 import { buildQuoteFiles, rasterize, type QuoteFiles } from '../files'
-import { quoteBaseName } from '../renderQuote'
+import { quoteBaseName, renderPortfolioJpg } from '../renderQuote'
 import { aiReady, usd, type AiConfig } from '../ai'
 import { quoteFromMessage, type AiQuote } from '../aiTasks'
 import { IconSparkle } from './icons'
@@ -85,6 +87,19 @@ export function QuoteEditor({
   }, [toast])
   const results = useMemo(() => searchProducts(catalog, search), [catalog, search])
 
+  // Vista previa de la página 2 (también deja las miniaturas listas para generar).
+  const [portfolio, setPortfolio] = useState<PortfolioData | null>(null)
+  useEffect(() => {
+    if (!company.portfolioEnabled) return setPortfolio(null)
+    let alive = true
+    loadPortfolio(company.portfolioMax)
+      .then((d) => alive && setPortfolio(d))
+      .catch(() => alive && setPortfolio(null))
+    return () => {
+      alive = false
+    }
+  }, [company.portfolioEnabled, company.portfolioMax])
+
   useEffect(() => {
     document.body.classList.add('no-scroll')
     return () => document.body.classList.remove('no-scroll')
@@ -95,7 +110,10 @@ export function QuoteEditor({
     if (existing >= 0) {
       updateItem(existing, { qty: items[existing].qty + 1 })
     } else {
-      setItems((xs) => [...xs, { productId: p.id, name: p.name, thumb: null, unitPrice: p.price, qty: 1 }])
+      setItems((xs) => [
+        ...xs,
+        { productId: p.id, name: p.name, description: p.description, thumb: null, unitPrice: p.price, qty: 1 },
+      ])
       // La miniatura llega después; si la imagen no se puede leer (CORS), va sin foto.
       if (p.imageUrl)
         void toDataUrl(p.imageUrl, 160).then(
@@ -116,6 +134,7 @@ export function QuoteEditor({
         next.push({
           productId: l.product?.id ?? null,
           name: l.product?.name ?? l.name,
+          description: l.product?.description ?? '',
           thumb: null,
           unitPrice: l.product?.price ?? 0,
           qty: l.qty,
@@ -158,7 +177,9 @@ export function QuoteEditor({
         items,
         conditions,
       })
-      const files = await buildQuoteFiles(jpg, quoteBaseName(quote), `Cotización ${n}`)
+      // Sin portafolio si falla (sin conexión a Supabase): la cotización sale igual.
+      const portfolio = await renderPortfolioJpg(company).catch(() => null)
+      const files = await buildQuoteFiles(jpg, portfolio, quoteBaseName(quote), `Cotización ${n}`)
       toast(`Cotización ${n} generada`)
       onGenerated(quote, files, contact)
     } catch (err) {
@@ -287,8 +308,16 @@ export function QuoteEditor({
                       className="qe-item-name"
                       rows={Math.min(5, Math.max(1, Math.ceil(it.name.length / 18)))}
                       value={it.name}
-                      placeholder="Descripción"
+                      placeholder="Nombre del producto o servicio"
                       onChange={(e) => updateItem(idx, { name: e.target.value.replace(/\n/g, ' ') })}
+                    />
+                    <textarea
+                      className="qe-item-desc"
+                      rows={Math.min(4, Math.max(1, Math.ceil((it.description ?? '').length / 34)))}
+                      value={it.description ?? ''}
+                      placeholder="Descripción corta (opcional)"
+                      maxLength={200}
+                      onChange={(e) => updateItem(idx, { description: e.target.value.replace(/\n/g, ' ') })}
                     />
                     <div className="qe-item-nums">
                       <label>
@@ -360,6 +389,14 @@ export function QuoteEditor({
               data={{ number, clientName: clientName.trim() || '—', issueDate, validUntil, items, conditions }}
             />
           </ScaledSheet>
+          {portfolio && (
+            <>
+              <p className="qe-page-label">Página 2 · Portafolio (el mismo en todas las cotizaciones)</p>
+              <ScaledSheet>
+                <PortfolioSheet data={portfolio} company={company} />
+              </ScaledSheet>
+            </>
+          )}
         </div>
       </div>
 

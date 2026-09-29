@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { IconWhatsApp } from './icons'
+import { ReachIcon, reachClass, reachLabel } from './ReachIcon'
 import { errorMessage, useToast } from './toast'
 import { updateContact } from '../data'
-import { formatPhone } from '../phone'
+import { contactLine } from '../phone'
 import { initials, relDate } from '../format'
 import { STAGES, type Contact, type StageId } from '../types'
 
@@ -77,21 +77,22 @@ export function BoardView({
                       </span>
                       <b>{c.name}</b>
                     </div>
-                    <span className="muted small">{formatPhone(c.phone)}</span>
+                    <span className="muted small">{contactLine(c)}</span>
                     {(c.lastSentAt || due) && (
                       <span className="small board-meta">
                         {due ? <span className="due-overdue">● seguimiento pendiente</span> : <>enviado {relDate(c.lastSentAt)}</>}
                       </span>
                     )}
                     <button
-                      className="board-wa"
+                      className={`board-wa${reachClass(c)}`}
                       onClick={(e) => {
                         e.stopPropagation()
                         onSend(c)
                       }}
-                      aria-label={`Enviar WhatsApp a ${c.name}`}
+                      aria-label={reachLabel(c)}
+                      title={reachLabel(c)}
                     >
-                      <IconWhatsApp width={16} height={16} />
+                      <ReachIcon contact={c} size={16} />
                     </button>
                   </article>
                 )
