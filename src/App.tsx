@@ -112,6 +112,12 @@ const TABS: { id: Tab; label: string; Icon: typeof IconUsers }[] = [
 function Shell({ user }: { user: User }) {
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('contactos')
+  // Tocar "Contactos" estando ya en Contactos vuelve a la lista (cierra la ficha abierta).
+  const [homeSignal, setHomeSignal] = useState(0)
+  const goTab = (id: Tab) => {
+    if (id === 'contactos' && tab === 'contactos') setHomeSignal((n) => n + 1)
+    setTab(id)
+  }
   const contacts = useContacts()
   const templates = useTemplates()
   const settings = useSettings()
@@ -133,7 +139,7 @@ function Shell({ user }: { user: User }) {
         <Brand />
         <nav className="tabs hide-mobile">
           {TABS.map(({ id, label, Icon }) => (
-            <button key={id} className={`tab${tab === id ? ' tab-on' : ''}`} onClick={() => setTab(id)}>
+            <button key={id} className={`tab${tab === id ? ' tab-on' : ''}`} onClick={() => goTab(id)}>
               <Icon width={18} height={18} /> {label}
             </button>
           ))}
@@ -150,6 +156,7 @@ function Shell({ user }: { user: User }) {
       <main className="main">
         {tab === 'contactos' && (
           <ContactsView
+            homeSignal={homeSignal}
             contacts={contacts.data}
             loading={contacts.loading}
             templates={templates.data}
@@ -164,7 +171,7 @@ function Shell({ user }: { user: User }) {
 
       <nav className="bottom-nav show-mobile">
         {TABS.map(({ id, label, Icon }) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
+          <button key={id} className={tab === id ? 'on' : ''} onClick={() => goTab(id)}>
             <Icon />
             <span>{label}</span>
           </button>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { IconBoard, IconList, IconPlus, IconSearch, IconUpload } from './icons'
 import { BoardView } from './BoardView'
 import { ContactDetail } from './ContactDetail'
@@ -42,7 +42,10 @@ export function ContactsView({
   settings,
   quotes,
   ai,
+  homeSignal,
 }: {
+  /** Cambia cuando se toca "Contactos" estando ya en esta pestaña: vuelve a la lista. */
+  homeSignal: number
   contacts: Contact[]
   loading: boolean
   templates: Template[]
@@ -52,7 +55,30 @@ export function ContactsView({
 }) {
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<string>('todos')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedIdState] = useState<string | null>(null)
+
+  // La ficha abierta ocupa una entrada del historial: el botón (o gesto) atrás
+  // del celular la cierra y vuelve a la lista, en vez de salir de la app.
+  const setSelectedId = (id: string | null) => {
+    if (id === null) {
+      if (history.state?.crmContact) history.back() // el popstate la cierra
+      else setSelectedIdState(null)
+      return
+    }
+    if (!history.state?.crmContact) history.pushState({ crmContact: true }, '')
+    setSelectedIdState(id)
+  }
+  useEffect(() => {
+    const onPop = () => setSelectedIdState(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  useEffect(() => {
+    if (!homeSignal) return
+    setSelectedId(null)
+    window.scrollTo({ top: 0 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeSignal])
   const [dialog, setDialog] = useState<Dialog>(null)
   const [view, setViewState] = useState<View>(loadView)
 

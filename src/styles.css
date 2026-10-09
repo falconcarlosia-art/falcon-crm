@@ -314,7 +314,6 @@ img { display: block; max-width: 100%; }
   .contacts.has-selection ~ .fab, .contacts.has-selection .fab { display: none; }
 }
 @media (min-width: 900px) {
-  .detail-back { display: none; }
   .contacts { grid-template-columns: minmax(340px, 420px) 1fr; align-items: start; }
   .detail-pane { position: sticky; top: 76px; }
   .modal-backdrop { align-items: center; padding: 24px; }
@@ -618,3 +617,14 @@ select {
   margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45;
   background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe;
 }
+
+/* Volver a la lista desde la ficha (solo celular: en escritorio la lista está al lado). */
+.detail-backbar { display: none; }
+@media (max-width: 899px) {
+  .detail-backbar.show-mobile { display: inline-flex; }
+}
+.detail-backbar {
+  align-items: center; gap: 4px; margin: 0 0 10px -6px; padding: 6px 10px 6px 4px;
+  background: none; border: none; border-radius: 10px; color: var(--orange); font-weight: 600; font-size: 15px;
+}
+.detail-backbar:active { background: #fff1e0; }

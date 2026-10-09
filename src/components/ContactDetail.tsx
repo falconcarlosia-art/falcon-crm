@@ -101,10 +101,10 @@ export function ContactDetail({
 
   return (
     <div className="detail">
+      <button className="detail-backbar show-mobile" onClick={onBack}>
+        <IconBack width={18} height={18} /> Contactos
+      </button>
       <div className="detail-top">
-        <button className="icon-btn detail-back" onClick={onBack} aria-label="Volver">
-          <IconBack />
-        </button>
         <div className="avatar avatar-lg" style={{ background: stage.color }}>
           {initials(contact.name)}
         </div>
@@ -147,7 +147,9 @@ export function ContactDetail({
         {wa ? (
           <button className="btn btn-wa btn-lg" onClick={() => onSend()}>
             <IconWhatsApp />
-            Enviar por WhatsApp
+            <span>
+              <span className="hide-mobile">Enviar por </span>WhatsApp
+            </span>
           </button>
         ) : (
           <button className="btn btn-ghost btn-lg" onClick={() => onSend()}>
